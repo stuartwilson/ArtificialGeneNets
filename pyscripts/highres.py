@@ -10,7 +10,7 @@ def getMap(fname):
     Imax = 1./np.max(I.shape)
     for y in range(I.shape[0]):
         for x in range(I.shape[1]):
-            if(I[y,x,3]==1): # use alpha to check which pixels belong
+            if(I[y,x,3]==1):
                 p = I[y,x,:3]
                 X = np.hstack([X,x*Imax])
                 Y = np.hstack([Y,(I.shape[0]-y-1)*Imax])
