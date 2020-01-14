@@ -5,7 +5,7 @@
 #include "morph/display.h"
 #include "morph/tools.h"
 #include "morph/HdfData.h"
-#include "../lib/Pineda.h"
+#include "Pineda.h"
 #include <iostream>
 
 using namespace std;
