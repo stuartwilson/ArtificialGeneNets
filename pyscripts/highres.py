@@ -30,11 +30,11 @@ def getMap(fname):
 
 L = np.zeros([5])
 
-x,y,w,L[0] = getMap('images/wild2.png')
-x,y,ko1,L[1] = getMap('images/coup2.png')
-x,y,ko2,L[2] = getMap('images/pax2.png')
-x,y,ko3,L[3] = getMap('images/sp82.png')
-x,y,ko4,L[4] = getMap('images/emx22.png')
+x,y,w,L[0] = getMap('../images/wild.png')
+x,y,ko1,L[1] = getMap('../images/coup.png')
+x,y,ko2,L[2] = getMap('../images/pax6.png')
+x,y,ko3,L[3] = getMap('../images/sp8.png')
+x,y,ko4,L[4] = getMap('../images/emx2.png')
 
 minL = int(np.min(L))
 x = x[:minL]
@@ -66,7 +66,7 @@ maps = np.hstack([maps, ko2])   # Pax6 knockout pattern
 maps = np.hstack([maps, ko3])   # Sp8  knockout pattern
 maps = np.hstack([maps, ko4])   # Emx2 knockout pattern
 
-h5f = h5py.File('highres.h5','w')
+h5f = h5py.File('../configs/highres.h5','w')
 
 h5f.create_dataset('x', data=x)
 h5f.create_dataset('y', data=y)

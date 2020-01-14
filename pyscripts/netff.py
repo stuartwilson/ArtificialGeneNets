@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 from conns import *
 
-h5f = h5py.File('network.h5','w')
+h5f = h5py.File('../configs/network.h5','w')
 
 N = 12
 n = np.array([N],dtype=int)
