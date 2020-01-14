@@ -1,0 +1,14 @@
+/*
+ * notes
+ */
+{
+	"T" : 400,
+	"K" : 2000000,
+	"taux" : 1,
+	"tauz" : 1,
+	"tauw" : 32,
+	"dt" : 0.02,
+	"inputfilepath" : "highres.h5",
+	"networkfilepath" : "network.h5",
+	"weightfilepath" : "logs/net.h5"
+}
