@@ -174,7 +174,7 @@ int main (int argc, char **argv){
 
         for(int k=0;k<K;k++){
 
-            //if(!(k%1000)){cout<<"steps: "<<k<<endl;}
+            if(!(k%1000)){cout<<"steps: "<<k<<endl;}
 
             int mapIndex = floor(morph::Tools::randDouble()*nMaps);
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
@@ -202,6 +202,7 @@ int main (int argc, char **argv){
             HdfData data(fname.str());
             stringstream ss; ss<<"error";
             data.add_contained_vals (ss.str().c_str(), Error);
+            cout<<"got here A"<<endl;
         }
 
         { // log weights
@@ -209,6 +210,7 @@ int main (int argc, char **argv){
             HdfData data(fname.str());
             stringstream ss; ss<<"weights";
             data.add_contained_vals (ss.str().c_str(), P.W);
+            cout<<"got here B"<<endl;
         }
     break;
     }
