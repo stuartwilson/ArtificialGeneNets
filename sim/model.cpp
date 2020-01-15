@@ -174,7 +174,7 @@ int main (int argc, char **argv){
 
         for(int k=0;k<K;k++){
 
-            if(!(k%1000)){cout<<"steps: "<<k<<endl;}
+            //if(!(k%1000)){cout<<"steps: "<<k<<endl;}
 
             int mapIndex = floor(morph::Tools::randDouble()*nMaps);
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
