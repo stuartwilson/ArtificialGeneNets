@@ -183,8 +183,10 @@ int main (int argc, char **argv){
             int mapIndex = floor(morph::Tools::randDouble()*nMaps);
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
 
-            inputs[0] = X[locationIndex];
-            inputs[1] = Y[locationIndex];
+            for(int i=0;i<nIns;i++){
+                inputs[i] = Ins[i][locationIndex];
+            }
+
             P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
 
             for(int t=0;t<T;t++){
@@ -223,9 +225,7 @@ int main (int argc, char **argv){
             stringstream ss; ss<<"weightmat";
             data.add_contained_vals (ss.str().c_str(), flatweightmat);
         }
-
-    break;
-    }
+    } break;
 
 
 
@@ -234,9 +234,11 @@ int main (int argc, char **argv){
     case(0): {        // TESTING
 
         // Displays
-        vector<double> fix(3, 0.0);
+        vector<double> fix(3,0.0);
         vector<morph::Gdisplay> displays;
         displays.push_back(morph::Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
+        displays[0].resetDisplay(fix,fix,fix);
+        displays[0].redrawDisplay();
 
         stringstream nname; nname << logpath << "/weights.h5";
         HdfData network(nname.str(),1);
@@ -250,8 +252,11 @@ int main (int argc, char **argv){
         vector<vector<double> > response;
         for(int i=0;i<nMaps;i++){
             for(int j=0;j<nLocations;j++){
-                inputs[0] = X[j];
-                inputs[1] = Y[j];
+
+                for(int k=0;k<nIns;k++){
+                    inputs[k] = Ins[k][j];
+                }
+
                 P.reset(inputs, Outs[Maps[i][j]]);
                 for(int t=0;t<T;t++){
                     P.forward();
@@ -264,8 +269,6 @@ int main (int argc, char **argv){
         }
 
 
-        displays[0].resetDisplay(fix,fix,fix);
-        displays[0].redrawDisplay();
         double maxX, maxY = -1e9;
         double minX, minY = 1e9;
         for(int i=0;i<nLocations;i++){
@@ -297,6 +300,10 @@ int main (int argc, char **argv){
             stringstream ss1; ss1<< logpath << "/VMS_RGB_";
             ss1 << j << ".png";
             displays[0].saveImage(ss1.str().c_str());
+        }
+
+        for(int j=0;j<nMaps;j++){
+             int ioff = j*nLocations;
 
             // max field id
             displays[0].resetDisplay(fix,fix,fix);
@@ -314,7 +321,10 @@ int main (int argc, char **argv){
             stringstream ss2; ss2<< logpath << "/MaxOut_";
             ss2 << j << ".png";
             displays[0].saveImage(ss2.str().c_str());
+        }
 
+        for(int j=0;j<nMaps;j++){
+             int ioff = j*nLocations;
 
             // max field id
             vector<vector<double> > cols2;
@@ -344,16 +354,15 @@ int main (int argc, char **argv){
             stringstream ss3; ss3<< logpath << "/MaxAlign_";
             ss3 << j << ".png";
             displays[0].saveImage(ss3.str().c_str());
-
-
         }
-        break;
-    }
+
+        displays[0].closeDisplay();
+
+    } break;
 
     default: {
             cout<<"Invalid mode selected"<<endl;
-            break;
-        }
+        } break;
     }
 
     logfile<<"Goodbye."<<endl;
