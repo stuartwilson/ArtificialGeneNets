@@ -40,12 +40,16 @@ int getArgmin(vector<double> q){
 
 int main (int argc, char **argv){
 
+    if(argc<3){
+        cout<<"Usage e.g.: ./build/sim/model configs/config.json logs 0 12 (where 0 is mode and 12 is optional seed)"<<endl<<flush;
+        return 0;
+    }
+
     string paramsfile (argv[1]);
     string logpath = argv[2];
     morph::Tools::createDir (logpath);
-    if(argc>4){ srand(stoi(argv[4])); }
-
     int mode = stoi(argv[3]);
+    if(argc>4){ srand(stoi(argv[4])); }
 
     // JSON stuff
     ifstream jsonfile_test;
@@ -201,8 +205,7 @@ int main (int argc, char **argv){
             stringstream fname; fname << logpath << "/out.h5";
             HdfData data(fname.str());
             stringstream ss; ss<<"error";
-            data.add_contained_vals (ss.str().c_str(), Error);
-            cout<<"got here A"<<endl;
+            data.add_contained_vals (ss.str().c_str(), Error);;
         }
 
         { // log weights
@@ -210,7 +213,6 @@ int main (int argc, char **argv){
             HdfData data(fname.str());
             stringstream ss; ss<<"weights";
             data.add_contained_vals (ss.str().c_str(), P.W);
-            cout<<"got here B"<<endl;
         }
     break;
     }

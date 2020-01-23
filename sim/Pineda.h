@@ -73,7 +73,7 @@ public:
 
         std::fill(U.begin(),U.end(),0.);
 
-        #pragma omp parallel for
+        //#pragma omp parallel for //buggy with this line uncommented???
         for(int k=0;k<Nweight;k++){
             U[Post[k]] += X[Pre[k]] * W[k];
         }
