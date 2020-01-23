@@ -96,12 +96,12 @@ int main (int argc, char **argv){
     int nLocations = X.size();
 
     int nIns;
-    vector<vector<int> > Ins;
+    vector<vector<double> > Ins;
     {
-        vector<int> tmp;
+        vector<double> tmp;
         input.read_contained_vals ("inPatterns", tmp);
         nIns = tmp.size()/nLocations;
-        Ins.resize(nIns,vector<int>(nLocations));
+        Ins.resize(nIns,vector<double>(nLocations));
         int k=0;
         for(int i=0;i<nIns;i++){
             for(int j=0;j<nLocations;j++){
@@ -184,7 +184,7 @@ int main (int argc, char **argv){
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
 
             for(int i=0;i<nIns;i++){
-                inputs[i] = Ins[mapIndex][locationIndex];
+                inputs[i] = Ins[i][locationIndex];
             }
 
             P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
