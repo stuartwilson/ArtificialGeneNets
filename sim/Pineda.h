@@ -73,15 +73,15 @@ public:
 
         std::fill(U.begin(),U.end(),0.);
 
-        //#pragma omp parallel for //buggy with this line uncommented???
+        // Don't OMP this loop - buggy!
         for(int k=0;k<Nweight;k++){
             U[Post[k]] += X[Pre[k]] * W[k];
         }
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<N;i++){
             F[i] = 1./(1.+exp(-U[i]));
         }
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<N;i++){
             X[i] +=dtOverTauX* ( -X[i] + F[i] + Input[i] );
         }
@@ -90,22 +90,22 @@ public:
 
     void backward(void){
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<N;i++){
             Fprime[i] = F[i]*(1.0-F[i]);
         }
 
         std::fill(V.begin(), V.end(),0.);
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int k=0;k<Nweight;k++){
             V[Pre[k]] += Fprime[Post[k]] * W[k] * Z[Post[k]];
         }
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<N;i++){
             Z[i] +=dtOverTauZ * (V[i] - Z[i]);
         }
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<Nouts;i++){
             Z[outputID[i]] +=dtOverTauZ* (Target[i]-X[outputID[i]]);
         }
@@ -113,7 +113,7 @@ public:
 
     void weightUpdate(void){
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int k=0;k<Nweight;k++){
             W[k] +=dtOverTauW* (X[Pre[k]] * Z[Post[k]] * Fprime[Post[k]]);
         }
@@ -136,5 +136,21 @@ public:
         }
         return out;
     }
+
+    vector<double> getWeightMatrix(void){
+        vector<vector<double> > weightmat(N+1,vector<double>(N+1));
+        for(int i=0;i<Nweight;i++){
+            weightmat[Pre[i]][Post[i]] = W[i];
+        }
+
+        vector<double> flatweightmat;
+        for(int i=0;i<Nplus1;i++){
+            for(int j=0;j<Nplus1;j++){
+                flatweightmat.push_back(weightmat[i][j]);
+            }
+        }
+        return flatweightmat;
+    }
+
 };
 

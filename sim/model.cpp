@@ -40,21 +40,29 @@ int getArgmin(vector<double> q){
 
 int main (int argc, char **argv){
 
-    if(argc<3){
-        cout<<"Usage e.g.: ./build/sim/model configs/config.json logs 0 12 (where 0 is mode and 12 is optional seed)"<<endl<<flush;
+    if(argc<5){
+        cout<<"Usage e.g.: ./build/sim/model configs/config.json logs 100 12 (where 0 is steps (use 0 to run tests), 12 is seed"<<endl<<flush;
         return 0;
     }
 
     string paramsfile (argv[1]);
     string logpath = argv[2];
     morph::Tools::createDir (logpath);
+    int K=1;
     int mode = stoi(argv[3]);
-    if(argc>4){ srand(stoi(argv[4])); }
+    if(mode){
+        K = mode;
+        mode = 1;
+    }
+    srand(stoi(argv[4]));
 
-    stringstream ss; ss << logpath << "/log.txt";
+
     ofstream logfile;
-    logfile.open(ss.str());
-    logfile << "Hello! "<<endl;
+    {
+        stringstream ss; ss << logpath << "/log.txt";
+        logfile.open(ss.str());
+    }
+    logfile << "Hello! "<<endl<<"Running for "<<K<<" iterations."<<endl;
 
     // JSON stuff
     ifstream jsonfile_test;
@@ -73,24 +81,13 @@ int main (int argc, char **argv){
 
     // Get Params
 
-    //const int mode = root.get ("mode", -1).asInt();
     const unsigned int T = root.get ("T", 400).asUInt();
-    const unsigned int K = root.get ("K", 50000).asUInt();
     const float taux = root.get ("taux", 1).asFloat();
     const float tauz = root.get ("tauz", 1).asFloat();
     const float tauw = root.get ("tauw", 32).asFloat();
     const float dt = root.get ("dt", 0.02).asFloat();
 
-    string inputfilepath = root.get("inputfilepath", "no input file selected").asString();
-    logfile<<inputfilepath<<endl;
-
-    string networkfilepath = root.get("networkfilepath", "no network file selected").asString();
-    logfile<<networkfilepath<<endl;
-
-    string weightfilepath = root.get("weightfilepath", "no weight file selected").asString();
-    logfile<<weightfilepath<<endl;
-
-    stringstream iname; iname << inputfilepath;
+    stringstream iname; iname << logpath << "/inputs.h5";
     HdfData input(iname.str(),1);
     vector<double> X, Y;
     input.read_contained_vals ("x", X);
@@ -131,7 +128,7 @@ int main (int argc, char **argv){
 
     }
 
-    stringstream nname; nname << networkfilepath;
+    stringstream nname; nname << logpath << "/network.h5";
     HdfData network(nname.str(),1);
     vector<int> Ntmp(0);
     network.read_contained_vals ("N", Ntmp);
@@ -173,7 +170,7 @@ int main (int argc, char **argv){
 
     switch(mode){
 
-    case(0):{           // TRAINING
+    case(1):{           // TRAINING
 
         P.randomizeWeights(weightbounds[0], weightbounds[1]);
 
@@ -205,18 +202,28 @@ int main (int argc, char **argv){
         }
 
         {   // log outputs
-            stringstream fname; fname << logpath << "/out.h5";
+            stringstream fname; fname << logpath << "/outputs.h5";
             HdfData data(fname.str());
             stringstream ss; ss<<"error";
             data.add_contained_vals (ss.str().c_str(), Error);;
         }
 
         { // log weights
-            stringstream fname; fname << logpath << "/net.h5";
+            stringstream fname; fname << logpath << "/weights.h5";
             HdfData data(fname.str());
             stringstream ss; ss<<"weights";
             data.add_contained_vals (ss.str().c_str(), P.W);
         }
+
+        {
+            // log weights in matrix arrangement
+            vector<double> flatweightmat = P.getWeightMatrix();
+            stringstream fname; fname << logpath << "/weightmat.h5";
+            HdfData data(fname.str());
+            stringstream ss; ss<<"weightmat";
+            data.add_contained_vals (ss.str().c_str(), flatweightmat);
+        }
+
     break;
     }
 
@@ -224,14 +231,14 @@ int main (int argc, char **argv){
 
 
 
-    case(1): {        // TESTING
+    case(0): {        // TESTING
 
         // Displays
         vector<double> fix(3, 0.0);
         vector<morph::Gdisplay> displays;
         displays.push_back(morph::Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
 
-        stringstream nname; nname << weightfilepath;
+        stringstream nname; nname << logpath << "/weights.h5";
         HdfData network(nname.str(),1);
         vector<double> tmp;
         network.read_contained_vals ("weights", tmp);
@@ -286,6 +293,7 @@ int main (int argc, char **argv){
             for(int i=0;i<nLocations;i++){
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,response[ioff+i][outputID[0]],response[ioff+i][outputID[2]],response[ioff+i][outputID[1]]);
             }
+            displays[0].redrawDisplay();
             stringstream ss1; ss1<< logpath << "/VMS_RGB_";
             ss1 << j << ".png";
             displays[0].saveImage(ss1.str().c_str());
@@ -302,6 +310,7 @@ int main (int argc, char **argv){
                 vector<double> col = cols[m];
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
             }
+            displays[0].redrawDisplay();
             stringstream ss2; ss2<< logpath << "/MaxOut_";
             ss2 << j << ".png";
             displays[0].saveImage(ss2.str().c_str());
@@ -331,27 +340,11 @@ int main (int argc, char **argv){
                 vector<double> col = cols2[m];
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
             }
+            displays[0].redrawDisplay();
             stringstream ss3; ss3<< logpath << "/MaxAlign_";
             ss3 << j << ".png";
             displays[0].saveImage(ss3.str().c_str());
 
-            vector<vector<double> > weightmat(P.N+1,vector<double>(P.N+1));
-            for(int i=0;i<P.W.size();i++){
-                weightmat[P.Pre[i]][P.Post[i]] = P.W[i];
-            }
-
-            vector<double> flatweightmat;
-            for(int i=0;i<P.N+1;i++){
-                for(int j=0;j<P.N+1;j++){
-                    flatweightmat.push_back(weightmat[i][j]);
-                }
-            }
-
-            // log weights
-            stringstream fname; fname << logpath << "/weightmat.h5";
-            HdfData data(fname.str());
-            stringstream ss; ss<<"weightmat";
-            data.add_contained_vals (ss.str().c_str(), flatweightmat);
 
         }
         break;
