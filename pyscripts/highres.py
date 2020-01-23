@@ -66,7 +66,7 @@ maps = np.hstack([maps, ko2])   # Pax6 knockout pattern
 maps = np.hstack([maps, ko3])   # Sp8  knockout pattern
 maps = np.hstack([maps, ko4])   # Emx2 knockout pattern
 
-h5f = h5py.File('../configs/highres.h5','w')
+h5f = h5py.File('../configs/inputs.h5','w')
 
 h5f.create_dataset('x', data=x)
 h5f.create_dataset('y', data=y)
