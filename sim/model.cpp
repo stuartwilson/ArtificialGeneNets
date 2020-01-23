@@ -184,7 +184,7 @@ int main (int argc, char **argv){
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
 
             for(int i=0;i<nIns;i++){
-                inputs[i] = Ins[i][locationIndex];
+                inputs[i] = Ins[mapIndex][locationIndex];
             }
 
             P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
