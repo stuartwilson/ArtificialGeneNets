@@ -363,6 +363,7 @@ int main (int argc, char **argv){
         }
     }
 
+    logfile<<"Goodbye."<<endl;
     logfile.close();
     return 0;
 }
