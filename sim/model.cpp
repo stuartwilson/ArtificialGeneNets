@@ -51,6 +51,11 @@ int main (int argc, char **argv){
     int mode = stoi(argv[3]);
     if(argc>4){ srand(stoi(argv[4])); }
 
+    stringstream ss; ss << logpath << "/log.txt";
+    ofstream logfile;
+    logfile.open(ss.str());
+    logfile << "Hello! "<<endl;
+
     // JSON stuff
     ifstream jsonfile_test;
     int srtn = system ("pwd");
@@ -77,13 +82,13 @@ int main (int argc, char **argv){
     const float dt = root.get ("dt", 0.02).asFloat();
 
     string inputfilepath = root.get("inputfilepath", "no input file selected").asString();
-    cout<<inputfilepath<<endl;
+    logfile<<inputfilepath<<endl;
 
     string networkfilepath = root.get("networkfilepath", "no network file selected").asString();
-    cout<<networkfilepath<<endl;
+    logfile<<networkfilepath<<endl;
 
     string weightfilepath = root.get("weightfilepath", "no weight file selected").asString();
-    cout<<weightfilepath<<endl;
+    logfile<<weightfilepath<<endl;
 
     stringstream iname; iname << inputfilepath;
     HdfData input(iname.str(),1);
@@ -140,8 +145,6 @@ int main (int argc, char **argv){
     vector<double> weightbounds;
     network.read_contained_vals ("weightbounds", weightbounds);
 
-    cout<<"Got "<<knockoutID.size()<<" knockout IDs and "<< nMaps << " maps. Look right?"<<endl;
-
     vector<vector<double> > Outs;
     int nPatterns;
     {
@@ -178,7 +181,7 @@ int main (int argc, char **argv){
 
         for(int k=0;k<K;k++){
 
-            if(!(k%1000)){cout<<"steps: "<<k<<endl;}
+            if(!(k%1000)){logfile<<"steps: "<<k<<endl;}
 
             int mapIndex = floor(morph::Tools::randDouble()*nMaps);
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
@@ -360,5 +363,6 @@ int main (int argc, char **argv){
         }
     }
 
+    logfile.close();
     return 0;
 }
