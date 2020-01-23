@@ -296,10 +296,11 @@ int main (int argc, char **argv){
             for(int i=0;i<nLocations;i++){
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,response[ioff+i][outputID[0]],response[ioff+i][outputID[2]],response[ioff+i][outputID[1]]);
             }
-            displays[0].redrawDisplay();
             stringstream ss1; ss1<< logpath << "/VMS_RGB_";
             ss1 << j << ".png";
             displays[0].saveImage(ss1.str().c_str());
+            displays[0].redrawDisplay();
+
         }
 
         for(int j=0;j<nMaps;j++){
@@ -317,10 +318,11 @@ int main (int argc, char **argv){
                 vector<double> col = cols[m];
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
             }
-            displays[0].redrawDisplay();
             stringstream ss2; ss2<< logpath << "/MaxOut_";
             ss2 << j << ".png";
             displays[0].saveImage(ss2.str().c_str());
+            displays[0].redrawDisplay();
+
         }
 
         for(int j=0;j<nMaps;j++){
@@ -350,10 +352,11 @@ int main (int argc, char **argv){
                 vector<double> col = cols2[m];
                 displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
             }
-            displays[0].redrawDisplay();
             stringstream ss3; ss3<< logpath << "/MaxAlign_";
             ss3 << j << ".png";
             displays[0].saveImage(ss3.str().c_str());
+            displays[0].redrawDisplay();
+
         }
 
         displays[0].closeDisplay();
