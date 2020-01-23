@@ -1,12 +1,17 @@
 import h5py
 import numpy as np
 import pylab as pl
+import sys
 
-h5f = h5py.File('logs/recurrent12/out.h5','r')
+logdir = sys.argv[1]
+print(logdir)
+
+h5f = h5py.File(logdir + '/outputs.h5','r')
 err = h5f['error'][:]
 h5f.close()
 
-h5f = h5py.File('logs/weightmat.h5','r')
+
+h5f = h5py.File(logdir + '/weightmat.h5','r')
 W = h5f['weightmat'][:]
 n = int(np.sqrt(W.shape[0]))
 W = W.reshape([n,n])
