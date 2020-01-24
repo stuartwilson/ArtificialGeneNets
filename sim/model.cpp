@@ -203,32 +203,44 @@ int main (int argc, char **argv){
             Error.push_back(P.getError());
         }
 
-        {   // log outputs
+
+        // TESTING
+        logfile<<"Testing..."<<endl;
+        //vector<vector<double> > response;
+        vector<double> response;
+        for(int i=0;i<nMaps;i++){
+            for(int j=0;j<nLocations;j++){
+                for(int k=0;k<nIns;k++){ inputs[k] = Ins[k][j];}
+                P.reset(inputs, Outs[Maps[i][j]]);
+                for(int t=0;t<T;t++){
+                    P.forward();
+                    if(i>0){
+                        P.X[knockoutID[i-1]] = 0.;
+                    }
+                }
+                for(int l=0;l<P.X.size();l++){
+                    response.push_back(P.X[l]);
+                }
+                //response.push_back(P.X);
+            }
+        }
+
+        { // log outputs
             stringstream fname; fname << logpath << "/outputs.h5";
             HdfData data(fname.str());
-            stringstream ss; ss<<"error";
-            data.add_contained_vals (ss.str().c_str(), Error);;
+            data.add_contained_vals ("error", Error);
+            data.add_contained_vals ("responses", response);
         }
 
         { // log weights
             stringstream fname; fname << logpath << "/weights.h5";
             HdfData data(fname.str());
-            stringstream ss; ss<<"weights";
-            data.add_contained_vals (ss.str().c_str(), P.W);
-        }
-
-        {
-            // log weights in matrix arrangement
+            data.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
-            stringstream fname; fname << logpath << "/weightmat.h5";
-            HdfData data(fname.str());
-            stringstream ss; ss<<"weightmat";
-            data.add_contained_vals (ss.str().c_str(), flatweightmat);
+            data.add_contained_vals ("weightmat", flatweightmat);
         }
+
     } break;
-
-
-
 
 
     case(0): {        // TESTING
@@ -240,34 +252,32 @@ int main (int argc, char **argv){
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
 
-        stringstream nname; nname << logpath << "/weights.h5";
-        HdfData network(nname.str(),1);
-        vector<double> tmp;
-        network.read_contained_vals ("weights", tmp);
-        for(int i=0;i<tmp.size();i++){
-            P.W[i] = tmp[i];
+        {
+            // Loading
+            stringstream fname; fname << logpath << "/weights.h5";
+            HdfData data(fname.str(),1);
+            data.read_contained_vals ("weights", P.W);
         }
 
-        // TESTING
         vector<vector<double> > response;
-        for(int i=0;i<nMaps;i++){
-            for(int j=0;j<nLocations;j++){
-
-                for(int k=0;k<nIns;k++){
-                    inputs[k] = Ins[k][j];
+        {
+            stringstream fname; fname << logpath << "/outputs.h5";
+            HdfData data(fname.str(),1);
+            vector<double> tmp;
+            data.read_contained_vals ("responses", tmp);
+            int nNodes = tmp.size()/(nMaps*nLocations);
+            response.resize(nMaps*nLocations,vector<double>(nNodes,0.));
+            int k=0;
+            int l=0;
+            for(int i=0;i<nMaps*nLocations;i++){
+                for(int j=0;j<nNodes;j++){
+                    response[k][j]=tmp[l];
+                    l++;
                 }
-
-                P.reset(inputs, Outs[Maps[i][j]]);
-                for(int t=0;t<T;t++){
-                    P.forward();
-                    if(i>0){
-                        P.X[knockoutID[i-1]] = 0.;
-                    }
-                }
-                response.push_back(P.X);
+                k++;
             }
-        }
 
+        }
 
         double maxX, maxY = -1e9;
         double minX, minY = 1e9;
@@ -280,6 +290,60 @@ int main (int argc, char **argv){
         double Xoff = (maxX-minX)*0.5;
         double Yoff = (maxY-minY)*0.5;
 
+        for(int j=0;j<nMaps;j++){
+             int ioff = j*nLocations;
+
+            // max field id
+            vector<vector<double> > cols2;
+            {const double tmp[] = {0.8,0.8,0.8}; cols2.push_back(makeVector(tmp));} // none
+            {const double tmp[] = {1.,0.,0.}; cols2.push_back(makeVector(tmp));} // V1 col
+            {const double tmp[] = {0.,0.,1.}; cols2.push_back(makeVector(tmp));} // S1 col
+            {const double tmp[] = {0.,1.,0.}; cols2.push_back(makeVector(tmp));} // M1 col
+            {const double tmp[] = {1.,0.,1.}; cols2.push_back(makeVector(tmp));} // A1 col
+            {const double tmp[] = {0.,0.,0.}; cols2.push_back(makeVector(tmp));} // mixed
+            displays[0].resetDisplay(fix,fix,fix);
+            for(int i=0;i<nLocations;i++){
+                vector<double> q;
+                for(int j=0;j<nPatterns;j++){
+                    double sum = 0.;
+                    for(int k=0;k<outputID.size();k++){
+                        double diff = response[ioff+i][outputID[k]] - Outs[j][k];
+                        sum += diff*diff;
+                    }
+                    q.push_back(sum);
+                }
+                int m = getArgmin(q);
+                vector<double> col = cols2[m];
+                displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
+            }
+            stringstream ss3; ss3<< logpath << "/MaxAlign_";
+            ss3 << j << ".png";
+            displays[0].saveImage(ss3.str().c_str());
+            displays[0].redrawDisplay();
+
+        }
+
+        displays[0].closeDisplay();
+
+    } break;
+
+    default: {
+            cout<<"Invalid mode selected"<<endl;
+        } break;
+    }
+
+    logfile<<"Goodbye."<<endl;
+    logfile.close();
+    return 0;
+}
+
+
+
+
+
+
+
+/*
         vector<vector<double> > cols;
         {const double tmp[] = {1.,0.,0.}; cols.push_back(makeVector(tmp));} // V1 col
         {const double tmp[] = {0.,0.,1.}; cols.push_back(makeVector(tmp));} // S1 col
@@ -324,51 +388,4 @@ int main (int argc, char **argv){
             displays[0].redrawDisplay();
 
         }
-
-        for(int j=0;j<nMaps;j++){
-             int ioff = j*nLocations;
-
-            // max field id
-            vector<vector<double> > cols2;
-            {const double tmp[] = {0.8,0.8,0.8}; cols2.push_back(makeVector(tmp));} // none
-            {const double tmp[] = {1.,0.,0.}; cols2.push_back(makeVector(tmp));} // V1 col
-            {const double tmp[] = {0.,0.,1.}; cols2.push_back(makeVector(tmp));} // S1 col
-            {const double tmp[] = {0.,1.,0.}; cols2.push_back(makeVector(tmp));} // M1 col
-            {const double tmp[] = {1.,0.,1.}; cols2.push_back(makeVector(tmp));} // A1 col
-            {const double tmp[] = {0.,0.,0.}; cols2.push_back(makeVector(tmp));} // mixed
-            displays[0].resetDisplay(fix,fix,fix);
-            for(int i=0;i<nLocations;i++){
-
-                vector<double> q;
-                for(int j=0;j<nPatterns;j++){
-                    double sum = 0.;
-                    for(int k=0;k<outputID.size();k++){
-                        double diff = response[ioff+i][outputID[k]] - Outs[j][k];
-                        sum += diff*diff;
-                    }
-                    q.push_back(sum);
-                }
-                int m = getArgmin(q);
-                vector<double> col = cols2[m];
-                displays[0].drawHex(X[i]-Xoff,Y[i]-Yoff,0.,0.008,col[0],col[1],col[2]);
-            }
-            stringstream ss3; ss3<< logpath << "/MaxAlign_";
-            ss3 << j << ".png";
-            displays[0].saveImage(ss3.str().c_str());
-            displays[0].redrawDisplay();
-
-        }
-
-        displays[0].closeDisplay();
-
-    } break;
-
-    default: {
-            cout<<"Invalid mode selected"<<endl;
-        } break;
-    }
-
-    logfile<<"Goodbye."<<endl;
-    logfile.close();
-    return 0;
-}
+        */
