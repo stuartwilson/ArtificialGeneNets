@@ -1,6 +1,7 @@
 import numpy as np
 import pylab as pl
 import h5py
+from conns import *
 
 def getImg(fname):
     x = np.genfromtxt(fname, delimiter=',')
@@ -33,6 +34,9 @@ def getData(a):
         z[i] = (z[i]-minz)*norm
     return x,y,z
 
+'''
+    SETUP INPUTS
+'''
 
 a = getImg('case_19_50_P36_pup_sighted_control.csv')
 b = getImg('case_19_18_P36_pup_enucleated_at_P4.csv')
@@ -67,19 +71,30 @@ h5f.create_dataset('maps', data=maps)
 
 h5f.close()
 
+'''
+    SETUP NETWORK
+'''
 
-F = pl.figure()
-f = F.add_subplot(121)
-maxV = np.max(az)
-minV = np.min(az)
-C = (az-minV)/(maxV-minV)
 
-print(np.max(C))
-print(np.min(C))
-for i in range(minL):
-    c=C[i]
-    f.plot(ax[i],ay[i],'o',color=(c,c,c))
-f.set_aspect(1)
-F.savefig('test.pdf')
+N = 5
+n = np.array([N],dtype=int)
+inputs = np.array([0,1],dtype=int)
+outputs = np.array([2],dtype=int)
+knockouts = np.array([],dtype=int)
+weightbounds = np.array([-2.0,+2.0],dtype=float)
+pre = np.array([],dtype=int)
+post = np.array([],dtype=int)
 
-pl.show()
+######## NETWORK SPEC
+pre, post = recur(pre,post,np.arange(N))
+
+h5f = h5py.File('network.h5','w')
+h5f.create_dataset('N', data=n)
+h5f.create_dataset('inputs', data=inputs)
+h5f.create_dataset('outputs', data=outputs)
+h5f.create_dataset('knockouts', data=knockouts)
+h5f.create_dataset('pre', data=pre)
+h5f.create_dataset('post', data=post)
+h5f.create_dataset('weightbounds', data=weightbounds)
+
+h5f.close()
