@@ -11,6 +11,18 @@
 using namespace std;
 using namespace morph;
 
+
+vector<double> getUnique(vector<double> x){
+    vector<double> unique;
+    for(int i=0;i<x.size();i++){
+        bool uni = true;
+        for(int k=0;k<unique.size();k++){
+            if(x[i]==unique[k]){ uni = false; break; }
+        } if(uni){ unique.push_back(x[i]);}
+    }
+    return unique;
+}
+
 int main (int argc, char **argv){
 
     if(argc<5){
@@ -195,14 +207,29 @@ int main (int argc, char **argv){
 
         // Displays
         vector<double> fix(3,0.0);
-        vector<morph::Gdisplay> displays;
-        displays.push_back(morph::Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
+        vector<Gdisplay> displays;
+        displays.push_back(Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
+
+
+        vector<vector<int> > nunique(nMaps,vector<int>(2,0));
+        for (int j=0;j<nMaps;j++){
+            vector<double> x,y;
+            for(int i=0;i<nLocations;i++){
+                x.push_back(Ins[j*2][i]);
+                y.push_back(Ins[j*2+1][i]);
+            }
+            vector<double> uniqueX = getUnique(x);
+            vector<double> uniqueY = getUnique(y);
+            nunique[j][0] = uniqueX.size();
+            nunique[j][1] = uniqueY.size();
+        }
+
 
         {
             // Loading
@@ -245,8 +272,8 @@ int main (int argc, char **argv){
             if(Ins[1][i]<minY){ minY=Ins[1][i];}
             if(Ins[3][i]<minY){ minY=Ins[3][i];}
         }
-        double normX = 1./(maxX-minX);
-        double normY = 1./(maxY-minY);
+        //double normX = 1./(maxX-minX);
+        //double normY = 1./(maxY-minY);
 
         for(int j=0;j<nMaps;j++){
             int ioff = j*nLocations;
@@ -260,18 +287,34 @@ int main (int argc, char **argv){
             double normZ = 1./(maxZ-minZ);
 
             displays[0].resetDisplay(fix,fix,fix);
+            displays[0].resetDisplay(fix,fix,fix);
             cout<<response.size()<<endl;
             for(int i=0;i<nLocations;i++){
-                double x = (Ins[j*2][i]-minX)*normX-0.5;
-                double y = (Ins[j*2+1][i]-minY)*normY-0.5;
+                double x = Ins[j*2][i]-0.5;
+                double y = Ins[j*2+1][i]-0.5;
                 double z = (response[ioff+i]-minZ)*normZ;
-                //vector<double> rgb = morph::Tools::getJetColor(normedMaps[j][i]);
                 vector<double> rgb = morph::Tools::getJetColor(z);
-                displays[0].drawHex(x,y,0.,0.03,rgb[0],rgb[1],rgb[2]);
+                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
             }
-            stringstream ss1; ss1<< logpath << "/map_";
+            stringstream ss1; ss1<< logpath << "/fit_";
             ss1 << j << ".png";
             displays[0].saveImage(ss1.str().c_str());
+            displays[0].redrawDisplay();
+
+
+
+            displays[0].resetDisplay(fix,fix,fix);
+            displays[0].resetDisplay(fix,fix,fix);
+            cout<<response.size()<<endl;
+            for(int i=0;i<nLocations;i++){
+                double x = Ins[j*2][i]-0.5;
+                double y = Ins[j*2+1][i]-0.5;
+                vector<double> rgb = morph::Tools::getJetColor(normedMaps[j][i]);
+                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
+            }
+            stringstream ss2; ss2<< logpath << "/map_";
+            ss2 << j << ".png";
+            displays[0].saveImage(ss2.str().c_str());
             displays[0].redrawDisplay();
         }
         
