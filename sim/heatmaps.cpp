@@ -302,7 +302,6 @@ int main (int argc, char **argv){
             displays[0].redrawDisplay();
 
 
-
             displays[0].resetDisplay(fix,fix,fix);
             displays[0].resetDisplay(fix,fix,fix);
             cout<<response.size()<<endl;
