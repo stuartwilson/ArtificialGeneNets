@@ -10,17 +10,10 @@ cmake ..
 make
 cd ..
 
-
-To initalize (adds highres.h5 and network.h5 to configs):
-cd pyscripts
-python highres.py
-python netff.py
-cd ..
-
-Then to run...
-
-...training
-./build/sim/model configs/config.json logs 0 1
-
-...testing
-./build/sim/model configs/config.json logs 1 1
+Then to run e.g., mapIndMat:
+    cd mapIndMap
+    python heatmaps.py 
+    python netspec.py
+    bash run.sh 1 1000000
+    bash test.sh 1 0
+    python analyse.py 1 0
