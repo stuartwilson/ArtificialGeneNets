@@ -2,9 +2,9 @@
  Implementation of recurrent backprop algorithm by Pineda (1987) -- matrix version.
  */
 
+#include "morph/HdfData.h"
 #include "morph/display.h"
 #include "morph/tools.h"
-#include "morph/HdfData.h"
 #include "PinedaMatrix.h"
 #include <iostream>
 

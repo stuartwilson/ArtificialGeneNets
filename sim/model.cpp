@@ -1,15 +1,14 @@
 /*
  Implementation of (continous) recurrent backprop algorithm by Pineda (1987).
  */
-
+#include "morph/HdfData.h"
 #include "morph/display.h"
 #include "morph/tools.h"
-#include "morph/HdfData.h"
 #include "Pineda.h"
 #include <iostream>
 
-using namespace std;
 using namespace morph;
+using namespace std;
 
 template<typename T, size_t N> std::vector<T> makeVector(const T (&data)[N]){return std::vector<T>(data,data+N);}
 

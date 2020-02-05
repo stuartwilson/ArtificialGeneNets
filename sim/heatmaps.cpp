@@ -1,10 +1,9 @@
 /*
  Implementation of (continous) recurrent backprop algorithm by Pineda (1987).
  */
-
+#include "morph/HdfData.h"
 #include "morph/display.h"
 #include "morph/tools.h"
-#include "morph/HdfData.h"
 #include "Pineda.h"
 #include <iostream>
 
