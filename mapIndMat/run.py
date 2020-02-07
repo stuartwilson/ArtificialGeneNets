@@ -23,11 +23,14 @@ t = int(sys.argv[4])
 Seeds = np.arange(Nsims)
 Sizes = np.ones(Nsims)*Nnodes
 
-cullMax = 0.75
+cullMax = 0.95
 toCull = np.zeros(Nsims,dtype=int)
 for i in range(Nsims):
     toCull[i] = int(cullMax*(i/(Nsims-1))*Nnodes*Nnodes)
 
+
+finErr = np.zeros(Nsims)
+minErr = np.zeros(Nsims)
 
 ######## RUN THE MODEL
 j = 0
@@ -83,11 +86,18 @@ while(running):
         h5f = h5py.File(dst + '/outputs.h5','r')
         err = h5f['error'][:]
         h5f.close()
-        print("Error: "+str(err[-1])+" ("+str(k)+")")
+
+        finErr[k] = err[-1]
+        minErr[k] = np.min(err)
 
         running=k<(Nsims-1)
         k+=1
 
+    ### store results periodically
+    h5f = h5py.File('summary.h5','w')
+    h5f.create_dataset('finErr', data=finErr)
+    h5f.create_dataset('minErr', data=minErr)
+    h5f.close()
 
 
 
