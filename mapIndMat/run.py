@@ -8,9 +8,9 @@ h5f = h5py.File('network.h5','w')
 
 N = 32
 n = np.array([N],dtype=int)
-inputs = np.array([0,1],dtype=int)
-outputs = np.array([2],dtype=int)
-knockouts = np.array([],dtype=int)
+inputs = np.array([0,1,2,3],dtype=int)
+outputs = np.array([4,5,6,7],dtype=int)
+knockouts = np.array([8,9,10,11],dtype=int)
 pre = np.array([],dtype=int)
 post = np.array([],dtype=int)
 
@@ -32,8 +32,8 @@ h5f.close()
 ######## RUN THE MODEL
 p = []
 
-t = 10000
-n = 10
+t = 100000
+n = 5
 nbatch = 3
 
 k = 0
@@ -43,7 +43,7 @@ while(k<n):
         subprocess.run('mkdir '+dst,shell=True)
         subprocess.run('cp inputs.h5 '+dst+'/inputs.h5',shell=True)
         subprocess.run('cp network.h5 '+dst+'/network.h5',shell=True)
-        p = np.hstack([p,subprocess.Popen('./../build/sim/hmap config.json  '+dst+'  '+str(t)+' '+str(k),shell=True)])
+        p = np.hstack([p,subprocess.Popen('./../build/sim/greig config.json  '+dst+'  '+str(t)+' '+str(k),shell=True)])
         k = k+1
 
     ready=False

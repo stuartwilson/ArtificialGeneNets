@@ -113,6 +113,7 @@ int main (int argc, char **argv){
         }
     }
 
+
     int nMaps;
     vector<vector<int> > Maps;
     {
@@ -129,6 +130,7 @@ int main (int argc, char **argv){
         }
     }
 
+
     stringstream nname; nname << logpath << "/network.h5";
     HdfData network(nname.str(),1);
     vector<int> Ntmp(0);
@@ -140,6 +142,7 @@ int main (int argc, char **argv){
     network.read_contained_vals ("knockouts", knockoutID);
     network.read_contained_vals ("pre", pre);
     network.read_contained_vals ("post", post);
+
 
     vector<vector<double> > Outs;
 
@@ -158,8 +161,10 @@ int main (int argc, char **argv){
         }
     }
 
+
     Pineda P (N,inputID,outputID,eta,
     weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
+
 
     for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
 
@@ -167,17 +172,18 @@ int main (int argc, char **argv){
     P.setNet();
     vector<double> inputs(inputID.size());
 
+
     switch(mode){
 
     case(1):{           // TRAINING
 
         P.randomizeWeights(-1.0, +1.0);
 
+
         vector<double> Error;
         double errMin = 1e9;
 
         for(int k=0;k<K;k++){
-
             int mapIndex = floor(morph::Tools::randDouble()*nMaps);
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
             for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }

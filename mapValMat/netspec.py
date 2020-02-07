@@ -4,7 +4,7 @@ from conns import *
 
 h5f = h5py.File('network.h5','w')
 
-N = 22
+N = 32
 n = np.array([N],dtype=int)
 inputs = np.array([0,1],dtype=int)
 outputs = np.array([2],dtype=int)

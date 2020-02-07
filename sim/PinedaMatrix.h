@@ -17,11 +17,15 @@ public:
         this->inputID = inputID;
         this->outputID = outputID;
         etax2 = 2.*eta;
-        zero = 0.0;
         Nplus1 = N; // overwrite if bias
-        this->weightNudgeSize=weightNudgeSize;
-        this->divergenceThreshold=divergenceThreshold;
-        this->maxConvergenceSteps=maxConvergenceSteps;
+        this->weightNudgeSize= weightNudgeSize;
+        this->divergenceThreshold= divergenceThreshold;
+        this->maxConvergenceSteps= maxConvergenceSteps;
+        zero = 0.0;
+    }
+
+    ~Pineda(void){
+
     }
 
     void addBias(void){
@@ -52,6 +56,7 @@ public:
         Nouts = outputID.size();
         Nins = inputID.size();
         Wbest = W;
+
         Wptr.resize(Nplus1*Nplus1,&zero);
         for(int i=0;i<Nweight;i++){
             Wptr[Pre[i]*Nplus1+Post[i]] = &W[i];
@@ -112,6 +117,7 @@ public:
 
 
     void converge(int ko){
+
         vector<double> Xpre(Nweight,0.);
         double total = 1.;
         int count = 0;
@@ -143,7 +149,119 @@ public:
         X[ko]=0.;
     }
 
+
     void weightUpdate(void){
+
+        vector<bool> fixed(N,false);
+        for(int i=0;i<Nouts;i++){
+            fixed[outputID[i]] = true;
+        }
+        vector<double> deltas(Nplus1,0.);
+        for(int i=0;i<Nouts;i++){
+            int j = outputID[i];
+            deltas[j] = etax2*(Target[i]-X[j])*X[j]*(1.-X[j]);
+        }
+
+        int test=0;
+        bool someNodesFixed = false;
+        while(!someNodesFixed){
+
+            for(int k=0;k<Nweight;k++){
+                if(!fixed[Pre[k]] && fixed[Post[k]]){
+                    deltas[Pre[k]] += W[k]*deltas[Post[k]];
+                }
+            }
+
+            for(int k=0;k<N;k++){
+                if(!fixed[k] && deltas[k]!=0){
+                    deltas[k] *= X[k]*(1.-X[k]);
+                    fixed[k]=true;
+                }
+            }
+
+            someNodesFixed = false;
+            for(int i=0;i<N;i++){
+                if(fixed[i]){
+                    someNodesFixed = true;
+                    break;
+                }
+            }
+
+            if(test>10){
+                cout<<"stuck"<<endl;
+                return;
+            }
+            test++;
+        }
+        for(int k=0;k<Nweight;k++){
+            W[k] += X[Pre[k]] * deltas[Post[k]];
+        }
+    }
+
+
+
+/* //EQUIVALENT TO DAN'S
+void weightUpdate(void){
+
+        vector<bool> fixed(N,false);
+        for(int i=0;i<Nouts;i++){
+            fixed[outputID[i]] = true;
+        }
+        vector<double> deltas(Nplus1,0.);
+        for(int i=0;i<Nouts;i++){
+            int j = outputID[i];
+            deltas[j] = etax2*(Target[i]-X[j])*X[j]*(1.-X[j]);
+        }
+        vector<bool> visits(N,false);
+
+        int test=0;
+
+        bool someNodesUnfixed = false;
+        while(!someNodesUnfixed){
+
+
+            for(int k=0;k<Nweight;k++){
+                if(!fixed[Pre[k]] && fixed[Post[k]] && !visits[Post[k]]){
+                    deltas[Pre[k]] += W[k]*deltas[Post[k]];
+                }
+            }
+
+            for(int j=0;j<N;j++){
+                if(!visits[j] && fixed[j]){
+                    visits[j]=true;
+                }
+            }
+
+            for(int k=0;k<N;k++){
+                if(!fixed[k] && deltas[k]!=0){
+                    deltas[k] *= X[k]*(1.-X[k]);
+                    fixed[k]=true;
+                }
+            }
+
+            someNodesUnfixed = false;
+            for(int i=0;i<N;i++){
+                if(visits[i]){
+                    someNodesUnfixed = true;
+                    break;
+                }
+            }
+
+            if(test>10){
+                cout<<"stuck"<<endl;
+                return;
+            }
+            test++;
+        }
+        for(int k=0;k<Nweight;k++){
+            W[k] += X[Pre[k]] * deltas[Post[k]];
+        }
+    }
+*/
+
+/*
+// DAN ORIGINAL
+ void weightUpdate(void){
 
         vector<bool> fixed(N,false);
         for(int i=0;i<Nouts;i++){
@@ -186,4 +304,7 @@ public:
             W[k] += X[Pre[k]] * deltas[Post[k]];
         }
     }
+*/
+
+
 };

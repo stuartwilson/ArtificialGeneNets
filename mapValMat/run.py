@@ -32,7 +32,7 @@ h5f.close()
 ######## RUN THE MODEL
 p = []
 
-t = 10000
+t = 1000000
 n = 10
 nbatch = 3
 
