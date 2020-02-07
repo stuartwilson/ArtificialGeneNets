@@ -244,8 +244,8 @@ int main (int argc, char **argv){
 
             P.W = P.Wbest;
             data.add_contained_vals ("weightsBest", P.W);
-            flatweightmat = P.getWeightMatrix();
-            data.add_contained_vals ("weightmatBest", flatweightmat);
+            vector<double> flatweightmat2 = P.getWeightMatrix();
+            data.add_contained_vals ("weightmatBest", flatweightmat2);
         }
 
     } break;
