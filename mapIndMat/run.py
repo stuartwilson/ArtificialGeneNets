@@ -54,7 +54,7 @@ while(running):
         pre, post = recur(pre,post,np.arange(N))
         for c in range(toCull[j]):
             pre, post = cullRand(pre,post)
-
+        print(len(pre))
 
         ###
         h5f = h5py.File(dst+'/network.h5','w')
@@ -82,13 +82,16 @@ while(running):
     for i in range(Nbatch):
         if not running: break
 
-        dst = dstRoot+str(k)
-        h5f = h5py.File(dst + '/outputs.h5','r')
-        err = h5f['error'][:]
-        h5f.close()
+        try:
+            dst = dstRoot+str(k)
+            h5f = h5py.File(dst + '/outputs.h5','r')
+            err = h5f['error'][:]
+            h5f.close()
 
-        finErr[k] = err[-1]
-        minErr[k] = np.min(err)
+            finErr[k] = err[-1]
+            minErr[k] = np.min(err)
+        except:
+            print("no output"+str(k)+"\n")
 
         running=k<(Nsims-1)
         k+=1
