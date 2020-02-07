@@ -54,7 +54,6 @@ while(running):
         pre, post = recur(pre,post,np.arange(N))
         for c in range(toCull[j]):
             pre, post = cullRand(pre,post)
-        print(len(pre))
 
         ###
         h5f = h5py.File(dst+'/network.h5','w')
@@ -95,6 +94,7 @@ while(running):
 
         running=k<(Nsims-1)
         k+=1
+        print(k)
 
     ### store results periodically
     h5f = h5py.File('summary.h5','w')
