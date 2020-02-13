@@ -122,12 +122,15 @@ int main (int argc, char **argv){
     vector<int> Ntmp(0);
     network.read_contained_vals ("N", Ntmp);
     int N = Ntmp[0];
-    vector<int> inputID, outputID, knockoutID, pre, post;
+    vector<int> inputID, outputID, knockoutID, contextID, pre, post;
     network.read_contained_vals ("inputs", inputID);
     network.read_contained_vals ("outputs", outputID);
-    network.read_contained_vals ("knockouts", knockoutID);
+    network.read_contained_vals ("context", contextID);
     network.read_contained_vals ("pre", pre);
     network.read_contained_vals ("post", post);
+
+    // Additional input to represent which map we are using
+    inputID.push_back(contextID[0]);
 
 
     Pineda P (N,inputID,outputID,eta,
@@ -150,11 +153,12 @@ int main (int argc, char **argv){
 
         for(int k=0;k<K;k++){
 
-            int mapIndex = 0;//floor(morph::Tools::randDouble()*nMaps);
+            int mapIndex = floor(morph::Tools::randDouble()*nMaps); // = 0;
             int locationIndex = floor(morph::Tools::randDouble()*nLocations);
             for(int i=0;i<2;i++){
                 inputs[i] = Ins[mapIndex*2+i][locationIndex];
             }
+            inputs[2]=(double)mapIndex;
 
             P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
             P.converge(-1);
@@ -163,7 +167,7 @@ int main (int argc, char **argv){
             if(!(k%errorSamplePeriod)){
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    int mapIndex = 0;// floor(morph::Tools::randDouble()*nMaps);
+                    int mapIndex = floor(morph::Tools::randDouble()*nMaps); // = 0;
                     int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                     for(int i=0;i<2;i++){
                         inputs[i] = Ins[mapIndex*2+i][locationIndex];
@@ -194,6 +198,7 @@ int main (int argc, char **argv){
                 for(int k=0;k<2;k++){
                     inputs[k] = Ins[i*2+k][j];
                 }
+                inputs[2]=(double)i;
                 P.reset(inputs, vector<double>(1,Maps[i][j]));
                 P.converge(-1);
                 response.push_back(P.X[outputID[0]]);
@@ -226,7 +231,7 @@ int main (int argc, char **argv){
         // Displays
         vector<double> fix(3,0.0);
         vector<Gdisplay> displays;
-        displays.push_back(Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
+        displays.push_back(Gdisplay(600, 600, 0, 0, "Image", 1.3, 0.0, 0.0));
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
         displays[0].resetDisplay(fix,fix,fix);
