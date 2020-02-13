@@ -218,6 +218,11 @@ int main (int argc, char **argv){
             data.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
             data.add_contained_vals ("weightmat", flatweightmat);
+
+            P.W = P.Wbest;
+            data.add_contained_vals ("weightsBest", P.W);
+            vector<double> flatweightmat2 = P.getWeightMatrix();
+            data.add_contained_vals ("weightmatBest", flatweightmat2);
         }
 
     } break;

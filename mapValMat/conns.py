@@ -15,3 +15,18 @@ def recur(pre, post, inds):
                 post = np.hstack([post,j])
     return pre, post
 
+def cullRand(pre, post):
+    if(len(pre)):
+        ind = np.floor(np.random.rand()*len(pre))
+        pre = np.delete(pre, ind)
+        post = np.delete(post, ind)
+    return pre, post
+
+
+def waitUntilReady(x):
+    ready=False
+    while(not ready):
+        ready=True
+        for i in range(len(x)):
+            if(x[i].poll() is None):
+                ready=False

@@ -22,6 +22,7 @@ def cullRand(pre, post):
         post = np.delete(post, ind)
     return pre, post
 
+
 def waitUntilReady(x):
     ready=False
     while(not ready):
