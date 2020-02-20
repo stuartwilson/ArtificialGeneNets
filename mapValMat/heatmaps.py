@@ -48,15 +48,32 @@ bx=bx[:minL]
 by=by[:minL]
 bz=bz[:minL]
 
-minz = np.min([np.min(az),np.min(bz)])
-maxz = np.max([np.max(az),np.max(bz)])
-norm = 1./(maxz-minz)
-for i in range(len(az)):
-    az[i] = (az[i]-minz)*norm
-for i in range(len(bz)):
-    bz[i] = (bz[i]-minz)*norm
+jointnorm = False
 
+if jointnorm :
 
+    minz = np.min([np.min(az),np.min(bz)])
+    maxz = np.max([np.max(az),np.max(bz)])
+    norm = 1./(maxz-minz)
+    for i in range(len(az)):
+        az[i] = (az[i]-minz)*norm
+    for i in range(len(bz)):
+        bz[i] = (bz[i]-minz)*norm
+
+else:
+
+    minz = np.min(az)
+    norm = 1./(np.max(az)-minz)
+    for i in range(len(az)):
+        az[i] = (az[i]-minz)*norm
+
+    minz = np.min(bz)
+    norm = 1./(np.max(bz)-minz)
+    for i in range(len(bz)):
+        bz[i] = (bz[i]-minz)*norm
+
+#az *= 10.
+#bz *= 10.
 #az = 1./(1.+np.exp(-(az-0.3)*1000.))
 #bz = 1./(1.+np.exp(-(bz-0.3)*1000.))
 
