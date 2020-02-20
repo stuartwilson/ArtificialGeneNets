@@ -172,6 +172,7 @@ int main (int argc, char **argv){
                     for(int i=0;i<2;i++){
                         inputs[i] = Ins[mapIndex*2+i][locationIndex];
                     }
+                    inputs[2]=(double)mapIndex;
                     P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
                     P.converge(-1);
 
@@ -186,7 +187,7 @@ int main (int argc, char **argv){
                 Error.push_back(err);
             }
             if(!(k%10000)){
-                logfile<<"steps: "<<100*(int)((float)k/(float)K)<<"% ("<<k<<")"<<endl;
+                logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
         }
 
