@@ -28,10 +28,6 @@ def getData(a):
                 y = np.hstack([y,(1.*i)*norm2])
                 x = np.hstack([x,(1.*j)*norm1*norm2])
                 z = np.hstack([z,a[i,j]])
-    minz = np.min(z)
-    norm = 1./(np.max(z)-minz)
-    for i in range(len(z)):
-        z[i] = (z[i]-minz)*norm
     return x,y,z
 
 '''
@@ -52,10 +48,13 @@ bx=bx[:minL]
 by=by[:minL]
 bz=bz[:minL]
 
-print(np.min(az))
-print(np.max(az))
-print(np.min(bz))
-print(np.max(bz))
+minz = np.min([np.min(az),np.min(bz)])
+maxz = np.max([np.max(az),np.max(bz)])
+norm = 1./(maxz-minz)
+for i in range(len(az)):
+    az[i] = (az[i]-minz)*norm
+for i in range(len(bz)):
+    bz[i] = (bz[i]-minz)*norm
 
 
 #az = 1./(1.+np.exp(-(az-0.3)*1000.))
