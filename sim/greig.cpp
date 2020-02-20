@@ -202,7 +202,7 @@ int main (int argc, char **argv){
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                Error.push_back(err);
+                //Error.push_back(err);
                 if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;

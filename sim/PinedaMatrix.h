@@ -146,7 +146,9 @@ public:
                 total +=(X[i]-Xpre[i])*(X[i]-Xpre[i]);
             }
         }
-        X[ko]=0.;
+        if(knockout){
+            X[ko]=0.;
+        }
     }
 
 

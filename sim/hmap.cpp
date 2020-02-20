@@ -175,11 +175,10 @@ int main (int argc, char **argv){
                     inputs[2]=(double)mapIndex;
                     P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
                     P.converge(-1);
-
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                Error.push_back(err);
+                //Error.push_back(err);
                 if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;

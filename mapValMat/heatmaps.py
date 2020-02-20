@@ -52,6 +52,12 @@ bx=bx[:minL]
 by=by[:minL]
 bz=bz[:minL]
 
+print(np.min(az))
+print(np.max(az))
+print(np.min(bz))
+print(np.max(bz))
+
+
 #az = 1./(1.+np.exp(-(az-0.3)*1000.))
 #bz = 1./(1.+np.exp(-(bz-0.3)*1000.))
 
