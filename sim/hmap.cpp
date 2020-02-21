@@ -207,25 +207,22 @@ int main (int argc, char **argv){
 
         { // log outputs
             stringstream fname; fname << logpath << "/outputs.h5";
-            HdfData data(fname.str());
-            data.add_contained_vals ("error", Error);
-            data.add_contained_vals ("responses", response);
-            data.~HdfData();
+            HdfData outdata(fname.str());
+            outdata.add_contained_vals ("error", Error);
+            outdata.add_contained_vals ("responses", response);
         }
 
         { // log weights
             stringstream fname; fname << logpath << "/weights.h5";
-            HdfData data(fname.str());
-            data.add_contained_vals ("weights", P.W);
+            HdfData weightdata(fname.str());
+            weightdata.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
-            data.add_contained_vals ("weightmat", flatweightmat);
-            data.~HdfData();
+            weightdata.add_contained_vals ("weightmat", flatweightmat);
 
             P.W = P.Wbest;
-            data.add_contained_vals ("weightsBest", P.W);
+            weightdata.add_contained_vals ("weightsBest", P.W);
             vector<double> flatweightmat2 = P.getWeightMatrix();
-            data.add_contained_vals ("weightmatBest", flatweightmat2);
-            data.~HdfData();
+            weightdata.add_contained_vals ("weightmatBest", flatweightmat2);
         }
 
     } break;
