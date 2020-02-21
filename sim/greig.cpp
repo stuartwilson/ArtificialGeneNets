@@ -230,14 +230,14 @@ int main (int argc, char **argv){
 
         { // log outputs
             stringstream fname; fname << logpath << "/outputs.h5";
-            HdfData data(fname.str());
+            HdfData outdata(fname.str());
             outdata.add_contained_vals ("error", Error);
             outdata.add_contained_vals ("responses", response);
         }
 
         { // log weights
             stringstream fname; fname << logpath << "/weights.h5";
-            HdfData data(fname.str());
+            HdfData weightdata(fname.str());
             weightdata.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
             weightdata.add_contained_vals ("weightmat", flatweightmat);
