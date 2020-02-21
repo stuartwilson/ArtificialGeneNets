@@ -7,10 +7,10 @@ def ffcon(pre, post, input,output):
             post = np.hstack([post,j])
     return pre, post
 
-def recur(pre, post, inds):
+def recur(pre, post, inds, selfconns=False):
     for i in inds:
         for j in inds:
-            if (~(i==j)):
+            if (selfconns or ~(i==j)):
                 pre = np.hstack([pre,i])
                 post = np.hstack([post,j])
     return pre, post
