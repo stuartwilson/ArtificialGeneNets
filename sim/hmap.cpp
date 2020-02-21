@@ -210,6 +210,7 @@ int main (int argc, char **argv){
             HdfData data(fname.str());
             data.add_contained_vals ("error", Error);
             data.add_contained_vals ("responses", response);
+            data.~HdfData();
         }
 
         { // log weights
@@ -218,11 +219,13 @@ int main (int argc, char **argv){
             data.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
             data.add_contained_vals ("weightmat", flatweightmat);
+            data.~HdfData();
 
             P.W = P.Wbest;
             data.add_contained_vals ("weightsBest", P.W);
             vector<double> flatweightmat2 = P.getWeightMatrix();
             data.add_contained_vals ("weightmatBest", flatweightmat2);
+            data.~HdfData();
         }
 
     } break;
