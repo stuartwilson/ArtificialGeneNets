@@ -72,8 +72,6 @@ else:
     for i in range(len(bz)):
         bz[i] = (bz[i]-minz)*norm
 
-#az *= 10.
-#bz *= 10.
 #az = 1./(1.+np.exp(-(az-0.3)*1000.))
 #bz = 1./(1.+np.exp(-(bz-0.3)*1000.))
 
