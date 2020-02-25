@@ -63,9 +63,16 @@ public:
         }
     }
 
+    void randomizeState(void){
+        for(int i=0;i<N;i++){
+            X[i] = morph::Tools::randDouble()*2.0-1.0;
+        }
+    }
+
     void reset(vector<double> input, vector<double> target){
 
-        std::fill(X.begin(),X.end(),0.); // NOTE: DW randomized the initial state
+        //std::fill(X.begin(),X.end(),0.); // NOTE: DW randomized the initial state
+        randomizeState();
         Input = input;
         Target = target;
     }
@@ -154,10 +161,13 @@ public:
 
     void weightUpdate(void){
 
+        // declare output nodes as fixed
         vector<bool> fixed(N,false);
         for(int i=0;i<Nouts;i++){
             fixed[outputID[i]] = true;
         }
+
+        // give output nodes additional delta term
         vector<double> deltas(Nplus1,0.);
         for(int i=0;i<Nouts;i++){
             int j = outputID[i];
@@ -195,6 +205,7 @@ public:
             }
             test++;
         }
+
         for(int k=0;k<Nweight;k++){
             W[k] += X[Pre[k]] * deltas[Post[k]];
         }
