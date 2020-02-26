@@ -185,6 +185,8 @@ int main (int argc, char **argv){
             
         }
 
+        P.W = P.Wbest;
+
         // TESTING
         logfile<<"Testing..."<<endl;
         vector<double> response;
@@ -213,11 +215,6 @@ int main (int argc, char **argv){
             weightdata.add_contained_vals ("weights", P.W);
             vector<double> flatweightmat = P.getWeightMatrix();
             weightdata.add_contained_vals ("weightmat", flatweightmat);
-
-            P.W = P.Wbest;
-            weightdata.add_contained_vals ("weightsBest", P.W);
-            vector<double> flatweightmat2 = P.getWeightMatrix();
-            weightdata.add_contained_vals ("weightmatBest", flatweightmat2);
         }
 
     } break;
