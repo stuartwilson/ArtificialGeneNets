@@ -19,7 +19,7 @@ public:
         etax2 = 2.*eta;
         Nplus1 = N; // overwrite if bias
         this->weightNudgeSize= weightNudgeSize;
-        this->divergenceThreshold= divergenceThreshold;
+        this->divergenceThreshold= divergenceThreshold * N;
         this->maxConvergenceSteps= maxConvergenceSteps;
         zero = 0.0;
     }
@@ -71,8 +71,8 @@ public:
 
     void reset(vector<double> input, vector<double> target){
 
-        //std::fill(X.begin(),X.end(),0.); // NOTE: DW randomized the initial state
-        randomizeState();
+        std::fill(X.begin(),X.end(),0.); // NOTE: DW randomized the initial state
+        //randomizeState();
         Input = input;
         Target = target;
     }
@@ -123,6 +123,7 @@ public:
     }
 
 
+    /* ORIGINAL - BASED ON DAN
     void converge(int ko){
 
         vector<double> Xpre(Nweight,0.);
@@ -132,7 +133,8 @@ public:
         if(ko>=0){ // -1 is no ko flag
             knockout = true;
         }
-        while(total>divergenceThreshold*N){
+
+        while(total>divergenceThreshold){
             count++;
             if(count>maxConvergenceSteps){
                 W = Wbest;
@@ -158,6 +160,136 @@ public:
         }
     }
 
+*/
+
+/*
+    void converge(int ko){
+
+        vector<double> Xpre(Nweight,0.);
+        double total = 1.;
+        int count = 0;
+        bool knockout = false;
+        if(ko>=0){ // -1 is no ko flag
+            knockout = true;
+        }
+
+        while(total>divergenceThreshold){
+            count++;
+            if(count>maxConvergenceSteps){
+                W = Wbest;
+                for(int k=0;k<Nweight;k++){
+                    W[k] += (morph::Tools::randDouble()*2-1)*weightNudgeSize;
+                }
+                count = 0;
+                break;
+            }
+            Xpre=X;
+            if(knockout){
+                step(ko);
+            } else {
+                step();
+            }
+            total=0;
+            for(int i=0;i<N;i++){
+                total +=(X[i]-Xpre[i])*(X[i]-Xpre[i]);
+            }
+        }
+        if(knockout){
+            X[ko]=0.;
+        }
+    }
+
+
+        void convergeNoNudge(int ko){
+
+        vector<double> Xpre(Nweight,0.);
+        double total = 1.;
+        int count = 0;
+        bool knockout = false;
+        if(ko>=0){ // -1 is no ko flag
+            knockout = true;
+        }
+
+        while(total>divergenceThreshold){
+            count++;
+            if(count>maxConvergenceSteps){
+                break;
+            }
+            Xpre=X;
+            if(knockout){
+                step(ko);
+            } else {
+                step();
+            }
+            total=0;
+            for(int i=0;i<N;i++){
+                total +=(X[i]-Xpre[i])*(X[i]-Xpre[i]);
+            }
+        }
+        if(knockout){
+            X[ko]=0.;
+        }
+    }
+*/
+
+
+
+    void converge(int ko, bool nudge){
+        bool knockout = (ko>=0);
+        vector<double> Xpre(N,0.);
+        double total = N;
+        for(int t=0;t<maxConvergenceSteps;t++){
+            if(total>divergenceThreshold){
+                Xpre=X;
+                if(knockout){ step(ko); } else { step(); }
+                total = 0.0;
+                for(int i=0;i<N;i++){
+                    total +=(X[i]-Xpre[i])*(X[i]-Xpre[i]);
+                }
+            } else {
+                if(nudge){
+                    W = Wbest;
+                    for(int k=0;k<Nweight;k++){
+                        W[k] += (morph::Tools::randDouble()*2-1)*weightNudgeSize;
+                    }
+                }
+                break;
+            }
+        }
+    if(knockout){ X[ko]=0.; }
+    }
+
+
+/*
+    void converge(int ko){
+
+        bool knockout = (ko>=0);
+
+        vector<double> Xpre(N,0.);
+
+        for(int t=0;t<maxConvergenceSteps;t++){
+
+            Xpre=X;
+            if(knockout){ step(ko); } else { step(); }
+            double total = 0.0;
+            for(int i=0;i<N;i++){
+                total +=(X[i]-Xpre[i])*(X[i]-Xpre[i]);
+            }
+
+            if(total<divergenceThreshold){
+                W = Wbest;
+                for(int k=0;k<Nweight;k++){
+                    W[k] += (morph::Tools::randDouble()*2-1)*weightNudgeSize;
+                }
+                break;
+            }
+        }
+
+        if(knockout){
+            X[ko]=0.;
+        }
+    }
+*/
 
     void weightUpdate(void){
 

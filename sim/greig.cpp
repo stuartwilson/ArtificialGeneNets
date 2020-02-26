@@ -1,5 +1,5 @@
 /*
- Implementation of recurrent backprop algorithm by Pineda (1987) -- matrix version.
+ Implementation of recurrent backprop algorithm by Pineda (1987)
  */
 
 #include "morph/HdfData.h"
@@ -179,39 +179,42 @@ int main (int argc, char **argv){
 
         P.randomizeWeights(-1.0, +1.0);
 
-
         vector<double> Error;
         double errMin = 1e9;
 
         for(int k=0;k<K;k++){
-            int mapIndex = floor(morph::Tools::randDouble()*nMaps);
-            int locationIndex = floor(morph::Tools::randDouble()*nLocations);
-            for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
-            P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-            P.converge(knockoutID[mapIndex-1]);
-            P.weightUpdate();
 
-            if(!(k%errorSamplePeriod)){
+            if(k%errorSamplePeriod){
+
+                int mapIndex = floor(morph::Tools::randDouble()*nMaps);
+                int locationIndex = floor(morph::Tools::randDouble()*nLocations);
+                for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
+                P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
+                P.converge(knockoutID[mapIndex-1],true);
+                P.weightUpdate();
+
+            } else {
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
                     int mapIndex = floor(morph::Tools::randDouble()*nMaps);
                     int locationIndex = floor(morph::Tools::randDouble()*nLocations);
-                    for(int i=0;i<nIns;i++){inputs[i] = Ins[i][locationIndex];}
+                    for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                     P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-                    P.converge(knockoutID[mapIndex-1]);
+                    P.converge(knockoutID[mapIndex-1],false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                //Error.push_back(err);
                 if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;
                 }
                 Error.push_back(err);
             }
+
             if(!(k%10000)){
-                logfile<<"steps: "<<100*(int)((float)k/(float)K)<<"% ("<<k<<")"<<endl;
+                logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
+
         }
 
         // TESTING
@@ -221,7 +224,7 @@ int main (int argc, char **argv){
             for(int j=0;j<nLocations;j++){
                 for(int k=0;k<nIns;k++){ inputs[k] = Ins[k][j];}
                 P.reset(inputs, Outs[Maps[i][j]]);
-                P.converge(knockoutID[i-1]);
+                P.converge(knockoutID[i-1],false);
                 for(int l=0;l<P.X.size();l++){
                     response.push_back(P.X[l]);
                 }

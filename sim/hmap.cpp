@@ -1,5 +1,5 @@
 /*
- Implementation of recurrent backprop algorithm by Pineda (1987) -- matrix version.
+ Implementation of recurrent backprop algorithm following Pineda (1987)
  */
 #include "morph/HdfData.h"
 #include "morph/display.h"
@@ -76,20 +76,14 @@ int main (int argc, char **argv){
     stringstream iname; iname << logpath << "/inputs.h5";
     HdfData input(iname.str(),1);
 
-
-
-
-
     int nMaps = 2; // map is a condition, e.g., sighted/enucleated
     int nLocations;
-    int nIns;
+    int nIns = nMaps*2; // (x and y for each map)
 
     vector<vector<double> > Ins;
     {
         vector<double> tmp;
         input.read_contained_vals ("inPatterns", tmp);
-
-        nIns = nMaps*2; // (x and y for each map)
         nLocations = tmp.size()/nIns;
 
         Ins.resize(nIns,vector<double>(nLocations));
@@ -132,7 +126,6 @@ int main (int argc, char **argv){
     // Additional input to represent which map we are using
     inputID.push_back(contextID[0]);
 
-
     Pineda P (N,inputID,outputID,eta,
     weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
 
@@ -153,41 +146,43 @@ int main (int argc, char **argv){
 
         for(int k=0;k<K;k++){
 
-            int mapIndex = floor(morph::Tools::randDouble()*nMaps); // = 0;
-            int locationIndex = floor(morph::Tools::randDouble()*nLocations);
-            for(int i=0;i<2;i++){
-                inputs[i] = Ins[mapIndex*2+i][locationIndex];
-            }
-            inputs[2]=(double)mapIndex;
+            if(k%errorSamplePeriod){
 
-            P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
-            P.converge(-1);
-            P.weightUpdate();
+                int mapIndex = floor(morph::Tools::randDouble()*nMaps);
+                int locationIndex = floor(morph::Tools::randDouble()*nLocations);
+                for(int i=0;i<2;i++){
+                    inputs[i] = Ins[mapIndex*2+i][locationIndex];
+                }
+                inputs[2]=(double)mapIndex;
+                P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
+                P.converge(-1,true);
+                P.weightUpdate();
 
-            if(!(k%errorSamplePeriod)){
+            } else {
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    int mapIndex = floor(morph::Tools::randDouble()*nMaps); // = 0;
+                    int mapIndex = floor(morph::Tools::randDouble()*nMaps);
                     int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                     for(int i=0;i<2;i++){
                         inputs[i] = Ins[mapIndex*2+i][locationIndex];
                     }
                     inputs[2]=(double)mapIndex;
                     P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
-                    P.converge(-1);
+                    P.converge(-1,false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                //Error.push_back(err);
                 if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;
                 }
                 Error.push_back(err);
             }
+
             if(!(k%10000)){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
+            
         }
 
         // TESTING
@@ -200,7 +195,7 @@ int main (int argc, char **argv){
                 }
                 inputs[2]=(double)i;
                 P.reset(inputs, vector<double>(1,Maps[i][j]));
-                P.converge(-1);
+                P.converge(-1,false);
                 response.push_back(P.X[outputID[0]]);
             }
         }
@@ -300,8 +295,6 @@ int main (int argc, char **argv){
             if(Ins[1][i]<minY){ minY=Ins[1][i];}
             if(Ins[3][i]<minY){ minY=Ins[3][i];}
         }
-        //double normX = 1./(maxX-minX);
-        //double normY = 1./(maxY-minY);
 
         for(int j=0;j<nMaps;j++){
             int ioff = j*nLocations;
