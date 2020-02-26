@@ -75,12 +75,13 @@ public:
         //randomizeState();
         Input = input;
         Target = target;
+
+        std::fill(U.begin(),U.end(),0.);
     }
 
 
     void step(void){
 
-        std::fill(U.begin(),U.end(),0.);
 
         for(int k=0;k<Nweight;k++){
             U[Post[k]] += X[Pre[k]] * W[k];
