@@ -1,4 +1,3 @@
-# GCAL MODELS BASED ON STEVENS ET AL. (2013) J. NEUROSCI.
 enable_language(CXX)
 
 add_executable(model model.cpp)

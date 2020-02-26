@@ -76,16 +76,18 @@ int main (int argc, char **argv){
     stringstream iname; iname << logpath << "/inputs.h5";
     HdfData input(iname.str(),1);
 
+    vector<int> dims;
+    input.read_contained_vals ("dims", dims);
+
     int nMaps = 2; // map is a condition, e.g., sighted/enucleated
-    int nLocations;
+    int nLocations = dims[1];
     int nIns = nMaps*2; // (x and y for each map)
+
 
     vector<vector<double> > Ins;
     {
         vector<double> tmp;
         input.read_contained_vals ("inPatterns", tmp);
-        nLocations = tmp.size()/nIns;
-
         Ins.resize(nIns,vector<double>(nLocations));
         int k=0;
         for(int i=0;i<nIns;i++){
@@ -219,10 +221,6 @@ int main (int argc, char **argv){
 
     } break;
 
-
-
-
-
     case(0): {        // PLOTTING
 
         // Displays
@@ -231,40 +229,34 @@ int main (int argc, char **argv){
         displays.push_back(Gdisplay(600, 600, 0, 0, "Image", 1.3, 0.0, 0.0));
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
-        displays[0].resetDisplay(fix,fix,fix);
-        displays[0].redrawDisplay();
-        displays[0].resetDisplay(fix,fix,fix);
-        displays[0].redrawDisplay();
 
-
-        vector<vector<int> > nunique(nMaps,vector<int>(2,0));
+        // deduce number of rows and columns
+        vector<vector<double> > nunique(nMaps,vector<double>(2,0));
         for (int j=0;j<nMaps;j++){
-            vector<double> x,y;
-            for(int i=0;i<nLocations;i++){
-                x.push_back(Ins[j*2][i]);
-                y.push_back(Ins[j*2+1][i]);
+            vector<double> uniqueX = getUnique(Ins[j*2]);
+            vector<double> uniqueY = getUnique(Ins[j*2+1]);
+            nunique[j][0] = 1./(double)uniqueX.size();
+            nunique[j][1] = 1./(double)uniqueY.size();
+        }
+
+        // joint normalize x, y extrema for plotting
+        double maxX, maxY = -1e9;
+        double minX, minY = 1e9;
+        {
+            double x,y;
+            for (int j=0;j<nMaps;j++){
+                for(int i=0;i<nLocations;i++){
+                    x=Ins[j*2][i];
+                    y=Ins[j*2+1][i];
+                    if(x>maxX){ maxX=x;}
+                    if(x<minX){ minX=x;}
+                    if(y>maxY){ maxY=y;}
+                    if(y<minY){ minY=y;}
+                }
             }
-            vector<double> uniqueX = getUnique(x);
-            vector<double> uniqueY = getUnique(y);
-            nunique[j][0] = uniqueX.size();
-            nunique[j][1] = uniqueY.size();
         }
 
-
-        {
-            // Loading
-            stringstream fname; fname << logpath << "/weights.h5";
-            HdfData data(fname.str(),1);
-            data.read_contained_vals ("weights", P.W);
-        }
-
-        vector<double > response;
-        {
-            stringstream fname; fname << logpath << "/outputs.h5";
-            HdfData data(fname.str(),1);
-            data.read_contained_vals ("responses", response);
-        }
-
+        // individually normalize z values (color) for each map
         vector<vector<double> > normedMaps = Maps;
         for(int i=0;i<Maps.size();i++){
             double maxM = -1e9;
@@ -279,23 +271,18 @@ int main (int argc, char **argv){
             }
         }
 
-        double maxX, maxY = -1e9;
-        double minX, minY = 1e9;
-        for(int i=0;i<nLocations;i++){
-            if(Ins[0][i]>maxX){ maxX=Ins[0][i];}
-            if(Ins[2][i]>maxX){ maxX=Ins[2][i];}
-            if(Ins[0][i]<minX){ minX=Ins[0][i];}
-            if(Ins[2][i]<minX){ minX=Ins[2][i];}
-
-            if(Ins[1][i]>maxY){ maxY=Ins[1][i];}
-            if(Ins[3][i]>maxY){ maxY=Ins[3][i];}
-            if(Ins[1][i]<minY){ minY=Ins[1][i];}
-            if(Ins[3][i]<minY){ minY=Ins[3][i];}
+        // load pre-computed responses
+        vector<double > response;
+        {
+            stringstream fname; fname << logpath << "/outputs.h5";
+            HdfData data(fname.str(),1);
+            data.read_contained_vals ("responses", response);
         }
 
-        for(int j=0;j<nMaps;j++){
+        // individually normalize z values (color) for each fit
+        vector<vector<double> > normedFits = Maps;
+        for(int j=0;j<Maps.size();j++){
             int ioff = j*nLocations;
-
             double maxZ=-1e9;
             double minZ=+1e9;
             for(int i=0;i<nLocations;i++){
@@ -303,31 +290,38 @@ int main (int argc, char **argv){
                 if(response[ioff+i]<minZ){minZ=response[ioff+i];}
             }
             double normZ = 1./(maxZ-minZ);
-
-            displays[0].resetDisplay(fix,fix,fix);
-            displays[0].resetDisplay(fix,fix,fix);
+            if(maxZ==minZ){ normZ = 0.; }
             for(int i=0;i<nLocations;i++){
-                double x = Ins[j*2][i]-0.5;
-                double y = Ins[j*2+1][i]-0.5;
-                double z = (response[ioff+i]-minZ)*normZ;
-                vector<double> rgb = morph::Tools::getJetColor(z);
-                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
+                normedFits[j][i] = (response[ioff+i]-minZ)*normZ;
             }
-            stringstream ss1; ss1<< logpath << "/fit_";
-            ss1 << j << ".png";
-            displays[0].saveImage(ss1.str().c_str());
-            displays[0].redrawDisplay();
+        }
 
-
-            displays[0].resetDisplay(fix,fix,fix);
+        // plot supplied map values
+        for(int j=0;j<nMaps;j++){
             displays[0].resetDisplay(fix,fix,fix);
             for(int i=0;i<nLocations;i++){
                 double x = Ins[j*2][i]-0.5;
                 double y = Ins[j*2+1][i]-0.5;
                 vector<double> rgb = morph::Tools::getJetColor(normedMaps[j][i]);
-                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
+                displays[0].drawRect(x,y,0.,nunique[j][0],nunique[j][1],rgb);
             }
             stringstream ss2; ss2<< logpath << "/map_";
+            ss2 << j << ".png";
+            displays[0].saveImage(ss2.str().c_str());
+            displays[0].redrawDisplay();
+        }
+
+
+        // plot responses
+        for(int j=0;j<nMaps;j++){
+            displays[0].resetDisplay(fix,fix,fix);
+            for(int i=0;i<nLocations;i++){
+                double x = Ins[j*2][i]-0.5;
+                double y = Ins[j*2+1][i]-0.5;
+                vector<double> rgb = morph::Tools::getJetColor(normedFits[j][i]);
+                displays[0].drawRect(x,y,0.,nunique[j][0],nunique[j][1],rgb);
+            }
+            stringstream ss2; ss2<< logpath << "/fit_";
             ss2 << j << ".png";
             displays[0].saveImage(ss2.str().c_str());
             displays[0].redrawDisplay();
@@ -337,6 +331,7 @@ int main (int argc, char **argv){
 
 
     } break;
+
 
     default: {
             cout<<"Invalid mode selected"<<endl;
