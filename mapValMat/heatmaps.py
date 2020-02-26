@@ -75,6 +75,8 @@ else:
 #az = 1./(1.+np.exp(-(az-0.3)*1000.))
 #bz = 1./(1.+np.exp(-(bz-0.3)*1000.))
 
+dims = np.array([2,minL],dtype=int)
+
 inPatterns = np.array([],dtype=float)
 inPatterns = np.hstack([inPatterns, ax])
 inPatterns = np.hstack([inPatterns, ay])
@@ -88,6 +90,7 @@ maps = np.hstack([maps, bz])     # enucleate
 h5f = h5py.File('inputs.h5','w')
 h5f.create_dataset('inPatterns', data=inPatterns)
 h5f.create_dataset('maps', data=maps)
+h5f.create_dataset('dims', data=dims)
 
 h5f.close()
 
