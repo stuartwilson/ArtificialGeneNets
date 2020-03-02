@@ -193,9 +193,8 @@ int main (int argc, char **argv){
                 int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                 for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                 P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-                //P.converge(knockoutID[mapIndex-1],true);
                 P.convergeForward(knockoutID[mapIndex-1],true);
-                P.convergeBackward(knockoutID[mapIndex-1],false);
+                P.convergeBackward(knockoutID[mapIndex-1],true);
                 P.weightUpdate();
 
             } else {
@@ -205,14 +204,13 @@ int main (int argc, char **argv){
                     int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                     for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                     P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-                    //P.converge(knockoutID[mapIndex-1],false);
                     P.convergeForward(knockoutID[mapIndex-1],false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
                 if(err<errMin){
                     errMin = err;
-                    P.Wbest = P.W;
+                    //P.Wbest = P.W;
                 }
                 Error.push_back(err);
             }
@@ -223,7 +221,7 @@ int main (int argc, char **argv){
 
         }
 
-        P.W = P.Wbest;
+        //P.W = P.Wbest;
 
         // TESTING
         logfile<<"Testing..."<<endl;
@@ -232,7 +230,6 @@ int main (int argc, char **argv){
             for(int j=0;j<nLocations;j++){
                 for(int k=0;k<nIns;k++){ inputs[k] = Ins[k][j];}
                 P.reset(inputs, Outs[Maps[i][j]]);
-                //P.converge(knockoutID[i-1],false);
                 P.convergeForward(knockoutID[i-1],false);
                 for(int l=0;l<P.X.size();l++){
                     response.push_back(P.X[l]);
