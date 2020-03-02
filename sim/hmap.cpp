@@ -4,7 +4,7 @@
 #include "morph/HdfData.h"
 #include "morph/display.h"
 #include "morph/tools.h"
-#include "PinedaMatrix.h"
+#include "Pineda.h"
 #include <iostream>
 
 using namespace std;
@@ -64,13 +64,15 @@ int main (int argc, char **argv){
     if (!parsingSuccessful) { cerr << "Failed to parse JSON: " << errs; return 1;}
 
     // Get Params
-
-    const float eta = root.get("eta",0.05).asFloat();
+    const float dt = root.get("dt",1.0).asFloat();
+    const float tauW = root.get("tauW",2.0).asFloat();
+    const float tauX = root.get("tauX",1.0).asFloat();
+    const float tauY = root.get("tauY",1.0).asFloat();
     const int errorSamplePeriod = root.get("errorSamplePeriod",1000).asInt();
     const int errorSampleSize = root.get("errorSampleSize",100).asInt();
 
     const float weightNudgeSize = root.get("weightNudgeSize",0.001).asFloat();
-    const float divergenceThreshold = root.get("divergenceThreshold",0.0001).asFloat();
+    const float divergenceThreshold = root.get("divergenceThreshold",0.000001).asFloat();
     const int maxConvergenceSteps = root.get("maxConvergenceSteps",400).asInt();
 
     stringstream iname; iname << logpath << "/inputs.h5";
@@ -82,7 +84,6 @@ int main (int argc, char **argv){
     int nMaps = 2; // map is a condition, e.g., sighted/enucleated
     int nLocations = dims[1];
     int nIns = nMaps*2; // (x and y for each map)
-
 
     vector<vector<double> > Ins;
     {
@@ -128,8 +129,7 @@ int main (int argc, char **argv){
     // Additional input to represent which map we are using
     inputID.push_back(contextID[0]);
 
-    Pineda P (N,inputID,outputID,eta,
-    weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
+    Pineda P (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
 
     for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
 
@@ -156,11 +156,14 @@ int main (int argc, char **argv){
                     inputs[i] = Ins[mapIndex*2+i][locationIndex];
                 }
                 inputs[2]=(double)mapIndex;
+
                 P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
-                P.converge(-1,true);
+                P.convergeForward(-1,true);
+                P.convergeBackward(-1,false);
                 P.weightUpdate();
 
             } else {
+
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
                     int mapIndex = floor(morph::Tools::randDouble()*nMaps);
@@ -169,8 +172,9 @@ int main (int argc, char **argv){
                         inputs[i] = Ins[mapIndex*2+i][locationIndex];
                     }
                     inputs[2]=(double)mapIndex;
+
                     P.reset(inputs, vector<double>(1,Maps[mapIndex][locationIndex]));
-                    P.converge(-1,false);
+                    P.convergeForward(-1,false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
@@ -184,7 +188,7 @@ int main (int argc, char **argv){
             if(!(k%10000)){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
-            
+
         }
 
         P.W = P.Wbest;
@@ -199,7 +203,7 @@ int main (int argc, char **argv){
                 }
                 inputs[2]=(double)i;
                 P.reset(inputs, vector<double>(1,Maps[i][j]));
-                P.converge(-1,false);
+                P.convergeForward(-1,false);
                 response.push_back(P.X[outputID[0]]);
             }
         }
@@ -221,7 +225,7 @@ int main (int argc, char **argv){
 
     } break;
 
-    case(0): {        // PLOTTING
+  case(0): {        // PLOTTING
 
         // Displays
         vector<double> fix(3,0.0);
@@ -231,12 +235,12 @@ int main (int argc, char **argv){
         displays[0].redrawDisplay();
 
         // deduce number of rows and columns
-        vector<vector<double> > nunique(nMaps,vector<double>(2,0));
+        vector<vector<int> > nunique(nMaps,vector<int>(2,0));
         for (int j=0;j<nMaps;j++){
             vector<double> uniqueX = getUnique(Ins[j*2]);
             vector<double> uniqueY = getUnique(Ins[j*2+1]);
-            nunique[j][0] = 1./(double)uniqueX.size();
-            nunique[j][1] = 1./(double)uniqueY.size();
+            nunique[j][0] = uniqueX.size();
+            nunique[j][1] = uniqueY.size();
         }
 
         // joint normalize x, y extrema for plotting
@@ -298,12 +302,15 @@ int main (int argc, char **argv){
 
         // plot supplied map values
         for(int j=0;j<nMaps;j++){
+
             displays[0].resetDisplay(fix,fix,fix);
+            displays[0].resetDisplay(fix,fix,fix);
+
             for(int i=0;i<nLocations;i++){
                 double x = Ins[j*2][i]-0.5;
                 double y = Ins[j*2+1][i]-0.5;
                 vector<double> rgb = morph::Tools::getJetColor(normedMaps[j][i]);
-                displays[0].drawRect(x,y,0.,nunique[j][0],nunique[j][1],rgb);
+                displays[0].drawRect(x,y,0.,1./(double)nunique[j][0],1./(double)nunique[j][1],rgb);
             }
             stringstream ss2; ss2<< logpath << "/map_";
             ss2 << j << ".png";
@@ -314,12 +321,15 @@ int main (int argc, char **argv){
 
         // plot responses
         for(int j=0;j<nMaps;j++){
+
             displays[0].resetDisplay(fix,fix,fix);
+            displays[0].resetDisplay(fix,fix,fix);
+
             for(int i=0;i<nLocations;i++){
                 double x = Ins[j*2][i]-0.5;
                 double y = Ins[j*2+1][i]-0.5;
                 vector<double> rgb = morph::Tools::getJetColor(normedFits[j][i]);
-                displays[0].drawRect(x,y,0.,nunique[j][0],nunique[j][1],rgb);
+                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
             }
             stringstream ss2; ss2<< logpath << "/fit_";
             ss2 << j << ".png";
@@ -331,7 +341,6 @@ int main (int argc, char **argv){
 
 
     } break;
-
 
     default: {
             cout<<"Invalid mode selected"<<endl;

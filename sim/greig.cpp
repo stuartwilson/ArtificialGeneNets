@@ -5,7 +5,7 @@
 #include "morph/HdfData.h"
 #include "morph/display.h"
 #include "morph/tools.h"
-#include "PinedaMatrix.h"
+#include "Pineda.h"
 #include <iostream>
 
 using namespace std;
@@ -81,12 +81,15 @@ int main (int argc, char **argv){
 
     // Get Params
 
-    const float eta = root.get("eta",0.05).asFloat();
+    const float dt = root.get("dt",1.0).asFloat();
+    const float tauW = root.get("tauW",2.0).asFloat();
+    const float tauX = root.get("tauX",1.0).asFloat();
+    const float tauY = root.get("tauY",1.0).asFloat();
     const int errorSamplePeriod = root.get("errorSamplePeriod",1000).asInt();
     const int errorSampleSize = root.get("errorSampleSize",100).asInt();
 
     const float weightNudgeSize = root.get("weightNudgeSize",0.001).asFloat();
-    const float divergenceThreshold = root.get("divergenceThreshold",0.0001).asFloat();
+    const float divergenceThreshold = root.get("divergenceThreshold",0.000001).asFloat();
     const int maxConvergenceSteps = root.get("maxConvergenceSteps",400).asInt();
 
     stringstream iname; iname << logpath << "/inputs.h5";
@@ -162,8 +165,8 @@ int main (int argc, char **argv){
     }
 
 
-    Pineda P (N,inputID,outputID,eta,
-    weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
+        Pineda P (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
+
 
 
     for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
@@ -190,7 +193,9 @@ int main (int argc, char **argv){
                 int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                 for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                 P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-                P.converge(knockoutID[mapIndex-1],true);
+                //P.converge(knockoutID[mapIndex-1],true);
+                P.convergeForward(knockoutID[mapIndex-1],true);
+                P.convergeBackward(knockoutID[mapIndex-1],false);
                 P.weightUpdate();
 
             } else {
@@ -200,7 +205,8 @@ int main (int argc, char **argv){
                     int locationIndex = floor(morph::Tools::randDouble()*nLocations);
                     for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                     P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
-                    P.converge(knockoutID[mapIndex-1],false);
+                    //P.converge(knockoutID[mapIndex-1],false);
+                    P.convergeForward(knockoutID[mapIndex-1],false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
@@ -226,7 +232,8 @@ int main (int argc, char **argv){
             for(int j=0;j<nLocations;j++){
                 for(int k=0;k<nIns;k++){ inputs[k] = Ins[k][j];}
                 P.reset(inputs, Outs[Maps[i][j]]);
-                P.converge(knockoutID[i-1],false);
+                //P.converge(knockoutID[i-1],false);
+                P.convergeForward(knockoutID[i-1],false);
                 for(int l=0;l<P.X.size();l++){
                     response.push_back(P.X[l]);
                 }

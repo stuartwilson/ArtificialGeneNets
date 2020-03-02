@@ -2,8 +2,6 @@
  * notes
  */
 {
-
-	"eta" : 0.05,
 	"errorSampleSize" : 1000
 
 }
