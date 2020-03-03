@@ -221,18 +221,6 @@ int main (int argc, char **argv){
 
             if(k%errorSamplePeriod){
 
-                /*
-                int mapIndex = floor(morph::Tools::randDouble()*nMaps);
-
-                int fieldIndex = MapsUnique[mapIndex][floor(morph::Tools::randDouble()*MapsUnique[mapIndex].size())];
-
-                int locationIndex = -1;
-                int q = -1;
-                while((q!=fieldIndex)){
-                    locationIndex = floor(morph::Tools::randDouble()*nLocations);
-                    q = Maps[mapIndex][locationIndex];
-                }
-                */
                 int mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
                 int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
                 int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());

@@ -182,7 +182,7 @@ int main (int argc, char **argv){
                     errMin = err;
                     P.Wbest = P.W;
                 } else {
-                    P.W = P.Wbest;
+                    // P.W = P.Wbest; // doesn't seem to help with Val?
                 }
                 Error.push_back(errMin);
             }
