@@ -181,8 +181,10 @@ int main (int argc, char **argv){
                 if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;
+                } else {
+                    P.W = P.Wbest;
                 }
-                Error.push_back(err);
+                Error.push_back(errMin);
             }
 
             if(!(k%10000)){
