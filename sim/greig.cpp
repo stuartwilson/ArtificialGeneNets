@@ -37,6 +37,19 @@ int getArgmin(vector<double> q){
     return minI;
 }
 
+// Should template this for int, float etc. and make available in shared library (morph::Tools?)
+vector<int> getUnique(vector<int> x){
+    vector<int> unique;
+    for(int i=0;i<x.size();i++){
+        bool uni = true;
+        for(int k=0;k<unique.size();k++){
+            if(x[i]==unique[k]){ uni = false; break; }
+        } if(uni){ unique.push_back(x[i]);}
+    }
+    return unique;
+}
+
+
 
 int main (int argc, char **argv){
 
@@ -100,6 +113,7 @@ int main (int argc, char **argv){
 
     int nLocations = X.size();
 
+    // Get input values (co-ordinates)
     int nIns;
     vector<vector<double> > Ins;
     {
@@ -116,7 +130,7 @@ int main (int argc, char **argv){
         }
     }
 
-
+    // get mappings (each map is a list of indices into the output array)
     int nMaps;
     vector<vector<int> > Maps;
     {
@@ -133,7 +147,6 @@ int main (int argc, char **argv){
         }
     }
 
-
     stringstream nname; nname << logpath << "/network.h5";
     HdfData network(nname.str(),1);
     vector<int> Ntmp(0);
@@ -146,9 +159,8 @@ int main (int argc, char **argv){
     network.read_contained_vals ("pre", pre);
     network.read_contained_vals ("post", post);
 
-
+    // get output array (target output patterns)
     vector<vector<double> > Outs;
-
     int nPatterns;
     {
         vector<double> tmp;
@@ -164,8 +176,26 @@ int main (int argc, char **argv){
         }
     }
 
+    vector<vector<int> > MapsUnique(nMaps);
+    for(int i=0;i<nMaps;i++){
+        MapsUnique[i] = getUnique(Maps[i]);
+    }
 
-        Pineda P (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
+    vector<vector<vector<int> > > LocationsByField(nMaps);
+    for(int i=0;i<nMaps;i++){
+        LocationsByField[i].resize(MapsUnique[i].size());
+        for(int j=0;j<MapsUnique[i].size();j++){
+            for(int k=0;k<nLocations;k++){
+                if(Maps[i][k]==MapsUnique[i][j]){
+                    LocationsByField[i][j].push_back(k);
+                }
+            }
+        }
+    }
+
+
+
+    Pineda P (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
 
 
 
@@ -176,11 +206,13 @@ int main (int argc, char **argv){
     vector<double> inputs(inputID.size());
 
 
+
+
     switch(mode){
 
     case(1):{           // TRAINING
 
-        P.randomizeWeights(-1.0, +1.0);
+        P.randomizeWeights(-1., +1.);
 
         vector<double> Error;
         double errMin = 1e9;
@@ -189,8 +221,23 @@ int main (int argc, char **argv){
 
             if(k%errorSamplePeriod){
 
+                /*
                 int mapIndex = floor(morph::Tools::randDouble()*nMaps);
-                int locationIndex = floor(morph::Tools::randDouble()*nLocations);
+
+                int fieldIndex = MapsUnique[mapIndex][floor(morph::Tools::randDouble()*MapsUnique[mapIndex].size())];
+
+                int locationIndex = -1;
+                int q = -1;
+                while((q!=fieldIndex)){
+                    locationIndex = floor(morph::Tools::randDouble()*nLocations);
+                    q = Maps[mapIndex][locationIndex];
+                }
+                */
+                int mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
+                int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
+                int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());
+                int locationIndex = LocationsByField[mapIndex][fieldIndex][locIndex];
+
                 for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                 P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
                 P.convergeForward(knockoutID[mapIndex-1],true);
@@ -200,19 +247,26 @@ int main (int argc, char **argv){
             } else {
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    int mapIndex = floor(morph::Tools::randDouble()*nMaps);
-                    int locationIndex = floor(morph::Tools::randDouble()*nLocations);
+                    //int mapIndex = floor(morph::Tools::randDouble()*nMaps);
+                    //int locationIndex = floor(morph::Tools::randDouble()*nLocations);
+                    int mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
+                    int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
+                    int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());
+                    int locationIndex = LocationsByField[mapIndex][fieldIndex][locIndex];
+
                     for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
                     P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
                     P.convergeForward(knockoutID[mapIndex-1],false);
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                if(err<errMin){
+                if(err<=errMin){
                     errMin = err;
-                    //P.Wbest = P.W;
+                    P.Wbest = P.W;
+                } else {
+                    P.W = P.Wbest;
                 }
-                Error.push_back(err);
+                Error.push_back(errMin);
             }
 
             if(!(k%10000)){
@@ -221,7 +275,7 @@ int main (int argc, char **argv){
 
         }
 
-        //P.W = P.Wbest;
+        P.W = P.Wbest;
 
         // TESTING
         logfile<<"Testing..."<<endl;
@@ -263,7 +317,7 @@ int main (int argc, char **argv){
         // Displays
         vector<double> fix(3,0.0);
         vector<morph::Gdisplay> displays;
-        displays.push_back(morph::Gdisplay(600, 600, 0, 0, "Image", 1.7, 0.0, 0.0));
+        displays.push_back(morph::Gdisplay(600, 600, 0, 0, "Image", 1.25, 0.0, 0.0));
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
 

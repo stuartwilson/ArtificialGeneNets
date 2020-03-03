@@ -1,7 +1,13 @@
-/*
- * notes
- */
+/*	DEFAULTS:
+ * 	"dt" : 1.0,
+ *	"tauW" : 2.0,
+ *	"tauX" : 1.0,
+ *	"tauY" : 1.0,
+ *	"errorSampleSize" : 1000,
+ *	"weightNudgeSize" : 0.001,
+ *	"divergenceThreshold" : 0.000001 
+*/
+
 {
-	"errorSampleSize" : 1000
 
 }

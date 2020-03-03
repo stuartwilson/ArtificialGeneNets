@@ -183,7 +183,7 @@ public:
             }
         }
         if(nudge){
-            //W = Wbest;
+            W = Wbest;
             for(int k=0;k<Nweight;k++){
                 W[k] += (morph::Tools::randDouble()*2-1)*weightNudgeSize;
             }
@@ -210,7 +210,7 @@ public:
             }
         }
         if(nudge){
-            //W = Wbest;
+            W = Wbest;
             for(int k=0;k<Nweight;k++){
                 W[k] += (morph::Tools::randDouble()*2-1)*weightNudgeSize;
             }
