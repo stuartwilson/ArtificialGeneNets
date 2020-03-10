@@ -2,12 +2,25 @@
 #include <iostream>
 using namespace std;
 
+#include <morph/Config.h>
+using morph::Config;
+
 
 class Context: public Net{
 
 public:
 
     Context(string logpath, string nname) : Net(logpath){
+
+
+        /*
+
+        //unsigned int Ntypes = static_cast<unsigned int>(A.size());
+
+        for(int i=0;i<Ntypes;i++){
+            const unsigned int n = A[i].get ("N", 1).asUInt();
+        }
+        */
 
         // SHOULD BE ABLE TO DEFINE THESE EXTERNALLY
         float dt = 1.0;
@@ -20,8 +33,15 @@ public:
 
         HdfData network(nname,1);
 
-        M.push_back(Map("/Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/sighted.h5"));
-        M.push_back(Map("/Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/enucleate.h5"));
+        Config conf;
+        conf.init ("test.json"); // Should specify in init params?
+        const Json::Value maps = conf.getArray("maps");
+        for(int i=0;i<maps.size();i++){
+            string fn = maps[i].get("filename", "unknown map").asString();
+            M.push_back(Map(fn));
+            int node = maps[i].get("node",-1).asInt(); // Should use this to attach map to specific node
+        }
+
 
         vector<int> Ntmp(0);
         network.read_contained_vals ("N", Ntmp);
