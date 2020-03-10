@@ -75,11 +75,11 @@ int main (int argc, char **argv){
     const float divergenceThreshold = root.get("divergenceThreshold",0.000001).asFloat();
     const int maxConvergenceSteps = root.get("maxConvergenceSteps",400).asInt();
 
-    stringstream iname; iname << logpath << "/inputs.h5";
-    HdfData input(iname.str(),1);
+    stringstream nname; nname << logpath << "/network.h5";
+    HdfData network(nname.str(),1);
 
     vector<int> dims;
-    input.read_contained_vals ("dims", dims);
+    network.read_contained_vals ("dims", dims);
 
     int nMaps = 2; // map is a condition, e.g., sighted/enucleated
     int nLocations = dims[1];
@@ -88,7 +88,7 @@ int main (int argc, char **argv){
     vector<vector<double> > Ins;
     {
         vector<double> tmp;
-        input.read_contained_vals ("inPatterns", tmp);
+        network.read_contained_vals ("inPatterns", tmp);
         Ins.resize(nIns,vector<double>(nLocations));
         int k=0;
         for(int i=0;i<nIns;i++){
@@ -102,7 +102,7 @@ int main (int argc, char **argv){
     vector<vector<double> > Maps;
     {
         vector<double> tmp;
-        input.read_contained_vals ("maps", tmp);
+        network.read_contained_vals ("maps", tmp);
         Maps.resize(nMaps,vector<double>(nLocations));
         int k=0;
         for(int i=0;i<nMaps;i++){
@@ -114,8 +114,6 @@ int main (int argc, char **argv){
 
     }
 
-    stringstream nname; nname << logpath << "/network.h5";
-    HdfData network(nname.str(),1);
     vector<int> Ntmp(0);
     network.read_contained_vals ("N", Ntmp);
     int N = Ntmp[0];
@@ -312,7 +310,7 @@ int main (int argc, char **argv){
                 double x = Ins[j*2][i]-0.5;
                 double y = Ins[j*2+1][i]-0.5;
                 vector<double> rgb = morph::Tools::getJetColor(normedMaps[j][i]);
-                displays[0].drawRect(x,y,0.,1./(double)nunique[j][0],1./(double)nunique[j][1],rgb);
+                displays[0].drawRect(x,y,0.,1./(nunique[j][0]),1./(nunique[j][1]),rgb);
             }
             stringstream ss2; ss2<< logpath << "/map_";
             ss2 << j << ".png";
@@ -331,7 +329,7 @@ int main (int argc, char **argv){
                 double x = Ins[j*2][i]-0.5;
                 double y = Ins[j*2+1][i]-0.5;
                 vector<double> rgb = morph::Tools::getJetColor(normedFits[j][i]);
-                displays[0].drawRect(x,y,0.,1./nunique[j][0],1./nunique[j][1],rgb);
+                displays[0].drawRect(x,y,0.,1./(nunique[j][0]),1./(nunique[j][1]),rgb);
             }
             stringstream ss2; ss2<< logpath << "/fit_";
             ss2 << j << ".png";

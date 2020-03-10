@@ -11,7 +11,19 @@ public:
     double zero, weightNudgeSize, divergenceThreshold;
     vector<double*> Wptr;
 
+    Pineda(void){
+
+    }
+
     Pineda(int N, vector<int> inputID, vector<int> outputID, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
+
+        init(N, inputID, outputID, dt, tauW, tauX, tauY, weightNudgeSize, divergenceThreshold, maxConvergenceSteps);
+    }
+    
+    void init(int N, vector<int> inputID, vector<int> outputID, double dt, double tauW,
+
+        double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
+
         this->N=N;
         X.resize(N,0.);
         U.resize(N,0.);
