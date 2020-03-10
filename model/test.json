@@ -1,0 +1,17 @@
+
+/*
+* /Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/sighted.h5
+* /Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/enucleate.h5
+*/
+
+{
+	"maps" : [
+		{
+			"filename" : "maps/sighted.h5",
+			"node" : 1
+		},
+		{	
+			"filename" : "maps/enucleate.h5",
+			"node" : 2			
+		}
+}
