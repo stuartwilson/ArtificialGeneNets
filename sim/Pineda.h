@@ -4,10 +4,10 @@
 using namespace std;
 class Pineda{
 public:
-    int N, Nweight, Nplus1, Nins, maxConvergenceSteps;
+    int N, Nweight, Nplus1, maxConvergenceSteps;
     vector<double> W, X, Input, Target, U, Wbest, Y, F, V, Fprime, J;
     double dt, dtOverTauX, dtOverTauY, dtOverTauW;
-    vector<int> Pre, Post, inputID;
+    vector<int> Pre, Post;
     double zero, weightNudgeSize, divergenceThreshold;
     vector<double*> Wptr;
 
@@ -15,14 +15,12 @@ public:
 
     }
 
-    Pineda(int N, vector<int> inputID, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
+    Pineda(int N, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
 
-        init(N, inputID, dt, tauW, tauX, tauY, weightNudgeSize, divergenceThreshold, maxConvergenceSteps);
+        init(N, dt, tauW, tauX, tauY, weightNudgeSize, divergenceThreshold, maxConvergenceSteps);
     }
     
-    void init(int N, vector<int> inputID, double dt, double tauW,
-
-        double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
+    void init(int N, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
 
         this->N=N;
         X.resize(N,0.);
@@ -31,7 +29,6 @@ public:
         F.resize(N,0.);
         J.resize(N,0.);
         Fprime.resize(N,0.);
-        this->inputID = inputID;
         Nplus1 = N; // overwrite if bias
         this->weightNudgeSize= weightNudgeSize;
         this->divergenceThreshold= divergenceThreshold * N;
@@ -74,9 +71,7 @@ public:
 
     void setNet(void){
         Nweight = W.size();
-        Nins = inputID.size();
         Wbest = W;
-
         Wptr.resize(Nplus1*Nplus1,&zero);
         for(int i=0;i<Nweight;i++){
             Wptr[Pre[i]*Nplus1+Post[i]] = &W[i];
@@ -89,17 +84,6 @@ public:
         }
     }
 
-    /*
-    void reset(vector<double> input, vector<double> target){
-
-        std::fill(X.begin(),X.end()-1,0.);
-        std::fill(Y.begin(),Y.end()-1,0.);
-        for(int i=0;i<Nins;i++){
-            Input[inputID[i]] = input[i];
-        }
-        Target = target;
-    }
-    */
     void reset(void){
         std::fill(X.begin(),X.end()-1,0.);
         std::fill(Y.begin(),Y.end()-1,0.);

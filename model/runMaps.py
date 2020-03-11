@@ -39,6 +39,7 @@ while(running):
 
         dst = dstRoot+str(j)
         subprocess.run('mkdir '+dst,shell=True)
+        subprocess.run('cp configs/configEnucleateOriginal.json '+dst+'/config.json',shell=True)
         subprocess.run('cp maps/sighted.h5 '+dst+'/sighted.h5',shell=True)
         subprocess.run('cp maps/enucleate.h5 '+dst+'/enucleate.h5',shell=True)
 
@@ -59,7 +60,7 @@ while(running):
 
         ###
         #subprocess.run('cp inputs.h5 '+dst+'/inputs.h5',shell=True)
-        P = np.hstack([P,subprocess.Popen('./../build/sim/model '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+        P = np.hstack([P,subprocess.Popen('./../build/sim/hmap '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
 
         ###
         running=j<(Nsims-1)

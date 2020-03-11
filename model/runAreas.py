@@ -122,7 +122,6 @@ while(running):
 
         ###
         h5f = h5py.File(dst+'/network.h5','w')
-        h5f.create_dataset('N', data=Narr)
         h5f.create_dataset('inputs', data=inputs)
         h5f.create_dataset('outputs', data=outputs)
         h5f.create_dataset('knockouts', data=knockouts)
@@ -137,7 +136,7 @@ while(running):
 
         ###
         #subprocess.run('cp inputs.h5 '+dst+'/inputs.h5',shell=True)
-        P = np.hstack([P,subprocess.Popen('./../build/sim/model2 '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+        P = np.hstack([P,subprocess.Popen('./../build/sim/greig '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
 
         ###
         running=j<(Nsims-1)

@@ -1,254 +1,179 @@
-/*
- Implementation of recurrent backprop algorithm by Pineda (1987)
- */
-
-#include "morph/HdfData.h"
-#include "morph/display.h"
-#include "morph/tools.h"
-#include "Pineda.h"
+#include "Nets.h"
 #include <iostream>
-
 using namespace std;
-using namespace morph;
 
-template<typename T, size_t N> std::vector<T> makeVector(const T (&data)[N]){return std::vector<T>(data,data+N);}
-
-int getArgmax(vector<double> q){
-    double maxV = -1e9;
-    int maxI = 0;
-    for(int i=0;i<q.size();i++){
-        if(q[i]>maxV){
-            maxV = q[i];
-            maxI = i;
-        }
-    }
-    return maxI;
-}
-
-int getArgmin(vector<double> q){
-    double minV = 1e9;
-    int minI = 0;
-    for(int i=0;i<q.size();i++){
-        if(q[i]<minV){
-            minV = q[i];
-            minI = i;
-        }
-    }
-    return minI;
-}
-
-// Should template this for int, float etc. and make available in shared library (morph::Tools?)
-vector<int> getUnique(vector<int> x){
-    vector<int> unique;
-    for(int i=0;i<x.size();i++){
-        bool uni = true;
-        for(int k=0;k<unique.size();k++){
-            if(x[i]==unique[k]){ uni = false; break; }
-        } if(uni){ unique.push_back(x[i]);}
-    }
-    return unique;
-}
+#include <morph/Config.h>
+using morph::Config;
 
 
+class Greig: public Net{
 
-int main (int argc, char **argv){
-
-    if(argc<5){
-        cout<<"Usage e.g.: ./build/sim/model configs/config.json logs 100 12 (where 0 is steps (use 0 to run tests), 12 is seed"<<endl<<flush;
-        return 0;
-    }
-
-    string paramsfile (argv[1]);
-    string logpath = argv[2];
-    morph::Tools::createDir (logpath);
-    int K=1;
-    int mode = stoi(argv[3]);
-    if(mode){
-        K = mode;
-        mode = 1;
-    }
-    srand(stoi(argv[4]));
-
-
-    ofstream logfile;
-    {
-        stringstream ss; ss << logpath << "/log.txt";
-        logfile.open(ss.str());
-    }
-    logfile << "Hello! "<<endl<<"Running for "<<K<<" iterations."<<endl;
-
-    // JSON stuff
-    ifstream jsonfile_test;
-    int srtn = system ("pwd");
-    if (srtn) { cerr << "system call returned " << srtn << endl;}
-    jsonfile_test.open (paramsfile, ios::in);
-    if (jsonfile_test.is_open()) { jsonfile_test.close();}
-    else { cerr << "json config file " << paramsfile << " not found." << endl; return 1;}
-    ifstream jsonfile (paramsfile, ifstream::binary);
-    Json::Value root;
-    string errs;
-    Json::CharReaderBuilder rbuilder;
-    rbuilder["collectComments"] = false;
-    bool parsingSuccessful = Json::parseFromStream (rbuilder, jsonfile, &root, &errs);
-    if (!parsingSuccessful) { cerr << "Failed to parse JSON: " << errs; return 1;}
-
-    // Get Params
-
-    const float dt = root.get("dt",1.0).asFloat();
-    const float tauW = root.get("tauW",2.0).asFloat();
-    const float tauX = root.get("tauX",1.0).asFloat();
-    const float tauY = root.get("tauY",1.0).asFloat();
-    const int errorSamplePeriod = root.get("errorSamplePeriod",1000).asInt();
-    const int errorSampleSize = root.get("errorSampleSize",100).asInt();
-
-    const float weightNudgeSize = root.get("weightNudgeSize",0.001).asFloat();
-    const float divergenceThreshold = root.get("divergenceThreshold",0.000001).asFloat();
-    const int maxConvergenceSteps = root.get("maxConvergenceSteps",400).asInt();
-
-    stringstream iname; iname << logpath << "/inputs.h5";
-    HdfData input(iname.str(),1);
-    vector<double> X, Y;
-    input.read_contained_vals ("x", X);
-    input.read_contained_vals ("y", Y);
-
-    int nLocations = X.size();
-
-    // Get input values (co-ordinates)
-    int nIns;
+public:
+    int nMaps, nLocations, nIns;
     vector<vector<double> > Ins;
-    {
-        vector<double> tmp;
-        input.read_contained_vals ("inPatterns", tmp);
-        nIns = tmp.size()/nLocations;
-        Ins.resize(nIns,vector<double>(nLocations));
-        int k=0;
-        for(int i=0;i<nIns;i++){
-            for(int j=0;j<nLocations;j++){
-                Ins[i][j] = tmp[k];
-                k++;
-            }
-        }
-    }
-
-    // get mappings (each map is a list of indices into the output array)
-    int nMaps;
     vector<vector<int> > Maps;
-    {
-        vector<int> tmp;
-        input.read_contained_vals ("maps", tmp);
-        nMaps = tmp.size()/nLocations;
-        Maps.resize(nMaps,vector<int>(nLocations));
-        int k=0;
-        for(int i=0;i<nMaps;i++){
-            for(int j=0;j<nLocations;j++){
-                Maps[i][j] = tmp[k];
-                k++;
-            }
-        }
-    }
 
-    stringstream nname; nname << logpath << "/network.h5";
-    HdfData network(nname.str(),1);
-    vector<int> Ntmp(0);
-    network.read_contained_vals ("N", Ntmp);
-    int N = Ntmp[0];
-    vector<int> inputID, outputID, knockoutID, pre, post;
-    network.read_contained_vals ("inputs", inputID);
-    network.read_contained_vals ("outputs", outputID);
-    network.read_contained_vals ("knockouts", knockoutID);
-    network.read_contained_vals ("pre", pre);
-    network.read_contained_vals ("post", post);
-
-    // get output array (target output patterns)
+    int nPatterns, mapIndex;
     vector<vector<double> > Outs;
-    int nPatterns;
-    {
-        vector<double> tmp;
-        input.read_contained_vals ("outPatterns", tmp);
-        nPatterns = tmp.size() / outputID.size();
-        Outs.resize(nPatterns,vector<double>(outputID.size()));
-        int k=0;
-        for(int i=0;i<nPatterns;i++){
-            for(int j=0;j<outputID.size();j++){
-                Outs[i][j] = tmp[k];
-                k++;
-            }
+    vector<vector<vector<int> > > LocationsByField;
+    vector<int> knockoutID;
+    vector<double> X, Y;
+    vector<int> inputID, outputID;
+
+    Greig(string logpath, string nname) : Net(logpath){
+
+        Config conf;
+        stringstream ss; ss << logpath <<"/config.json";
+        conf.init (ss.str());
+        float dt = conf.getFloat("dt",1.0);
+        float tauW = conf.getFloat("tauW",2.0);
+        float tauX = conf.getFloat("tauX",1.0);
+        float tauY = conf.getFloat("tauY",1.0);
+        float weightNudgeSize = conf.getFloat("weightNudgeSize",0.001);
+        float divergenceThreshold = conf.getFloat("divergenceThreshold",0.000001);
+        int maxConvergenceSteps = conf.getInt("maxConvergenceSteps",400);
+
+        HdfData network(nname,1);
+        vector<int> pre, post;
+        network.read_contained_vals ("pre", pre);
+        network.read_contained_vals ("post", post);
+
+        if(pre.size()!=post.size()){ logfile<<"Pre/Post different sizes ("<<pre.size()<<"/"<<post.size()<<")"<<endl; exit(0);}
+        if(pre.size()<1){ logfile<<"No connections in network!"<<endl; exit(0);}
+        int N = tools::getMax(pre);
+        if(tools::getMax(post)>N){
+            N=tools::getMax(post);
         }
-    }
+        N++;
 
-    vector<vector<int> > MapsUnique(nMaps);
-    for(int i=0;i<nMaps;i++){
-        MapsUnique[i] = getUnique(Maps[i]);
-    }
+        // initialize network
+        P.init (N,dt,tauW,tauX,tauY,weightNudgeSize,divergenceThreshold,maxConvergenceSteps);
 
-    vector<vector<vector<int> > > LocationsByField(nMaps);
-    for(int i=0;i<nMaps;i++){
-        LocationsByField[i].resize(MapsUnique[i].size());
-        for(int j=0;j<MapsUnique[i].size();j++){
-            for(int k=0;k<nLocations;k++){
-                if(Maps[i][k]==MapsUnique[i][j]){
-                    LocationsByField[i][j].push_back(k);
+        for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
+        P.addBias();
+        P.setNet();
+
+        // REMAINDER IS SPECIFIC TO THIS MODEL IMPLEMENTATION
+        network.read_contained_vals ("x", X);
+        network.read_contained_vals ("y", Y);
+        nLocations = X.size();
+        network.read_contained_vals ("inputs", inputID);
+        network.read_contained_vals ("outputs", outputID);
+        network.read_contained_vals ("knockouts", knockoutID);
+
+        inputs.resize(inputID.size());
+
+
+        { // Get input values (co-ordinates)
+            vector<double> tmp;
+            network.read_contained_vals ("inPatterns", tmp);
+            nIns = tmp.size()/nLocations;
+            Ins.resize(nIns,vector<double>(nLocations));
+            int k=0;
+            for(int i=0;i<nIns;i++){
+                for(int j=0;j<nLocations;j++){
+                    Ins[i][j] = tmp[k];
+                    k++;
                 }
             }
         }
+
+        { // get mappings (each map is a list of indices into the output array)
+            vector<int> tmp;
+            network.read_contained_vals ("maps", tmp);
+            nMaps = tmp.size()/nLocations;
+            Maps.resize(nMaps,vector<int>(nLocations));
+            int k=0;
+            for(int i=0;i<nMaps;i++){
+                for(int j=0;j<nLocations;j++){
+                    Maps[i][j] = tmp[k];
+                    k++;
+                }
+            }
+        }
+
+        { // get output array (target output patterns)
+            vector<double> tmp;
+            network.read_contained_vals ("outPatterns", tmp);
+            nPatterns = tmp.size() / outputID.size();
+            Outs.resize(nPatterns,vector<double>(outputID.size()));
+            int k=0;
+            for(int i=0;i<nPatterns;i++){
+                for(int j=0;j<outputID.size();j++){
+                    Outs[i][j] = tmp[k];
+                    k++;
+                }
+            }
+        }
+
+        { // re-arange target outputs by field identity (for uniform sampling of fields)
+            vector<vector<int> > MapsUnique(nMaps);
+            for(int i=0;i<nMaps;i++){
+                MapsUnique[i] = getUnique(Maps[i]);
+            }
+
+            LocationsByField.resize(nMaps);
+            for(int i=0;i<nMaps;i++){
+                LocationsByField[i].resize(MapsUnique[i].size());
+                for(int j=0;j<MapsUnique[i].size();j++){
+                    for(int k=0;k<nLocations;k++){
+                        if(Maps[i][k]==MapsUnique[i][j]){
+                            LocationsByField[i][j].push_back(k);
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    void reset(void){
+        // NOTE THIS CIRCUMVENTS P.reset() FOR THIS SPECIFIC MODEL
+        std::fill(P.X.begin(),P.X.end()-1,0.);
+        std::fill(P.Y.begin(),P.Y.end()-1,0.);
+        for(int i=0;i<nIns;i++){ P.Input[inputID[i]] = inputs[i]; }
+    }
+
+    void setError(void){
+        // NOTE THIS CIRCUMVENTS P.setError() FOR THIS SPECIFIC MODEL
+        std::fill(P.J.begin(),P.J.end(),0.);
+        for(int i=0;i<outputID.size();i++){
+            P.J[outputID[i]] = P.Target[i]-P.X[outputID[i]];
+        }
+    }
+
+    void setRandomPattern(){
+        mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
+        int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
+        int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());
+        int locationIndex = LocationsByField[mapIndex][fieldIndex][locIndex];
+        for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
+        reset();
+        P.Target = Outs[Maps[mapIndex][locationIndex]];
     }
 
 
+    void run(int K, int errorSamplePeriod, int errorSampleSize){
 
-    Pineda P (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize, divergenceThreshold,maxConvergenceSteps);
-
-
-
-    for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
-
-    P.addBias();
-    P.setNet();
-    vector<double> inputs(inputID.size());
-
-
-
-
-    switch(mode){
-
-    case(1):{           // TRAINING
-
-        P.randomizeWeights(-1., +1.);
-
-        vector<double> Error;
+        P.randomizeWeights(-1.0, +1.0);
         double errMin = 1e9;
-
         for(int k=0;k<K;k++){
-
             if(k%errorSamplePeriod){
-
-                int mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
-                int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
-                int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());
-                int locationIndex = LocationsByField[mapIndex][fieldIndex][locIndex];
-
-                for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
-                P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
+                setRandomPattern();
                 P.convergeForward(knockoutID[mapIndex-1],true);
+                setError();
                 P.convergeBackward(knockoutID[mapIndex-1],true);
                 P.weightUpdate();
-
             } else {
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    //int mapIndex = floor(morph::Tools::randDouble()*nMaps);
-                    //int locationIndex = floor(morph::Tools::randDouble()*nLocations);
-                    int mapIndex = floor(morph::Tools::randDouble()*LocationsByField.size());
-                    int fieldIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex].size());
-                    int locIndex = floor(morph::Tools::randDouble()*LocationsByField[mapIndex][fieldIndex].size());
-                    int locationIndex = LocationsByField[mapIndex][fieldIndex][locIndex];
-
-                    for(int i=0;i<nIns;i++){ inputs[i] = Ins[i][locationIndex]; }
-                    P.reset(inputs, Outs[Maps[mapIndex][locationIndex]]);
+                    setRandomPattern();
                     P.convergeForward(knockoutID[mapIndex-1],false);
+                    setError();
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
-                if(err<=errMin){
+                if(err<errMin){
                     errMin = err;
                     P.Wbest = P.W;
                 } else {
@@ -256,51 +181,43 @@ int main (int argc, char **argv){
                 }
                 Error.push_back(errMin);
             }
-
             if(!(k%10000)){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
-
         }
-
         P.W = P.Wbest;
+    }
 
+
+
+    void test(void){
         // TESTING
         logfile<<"Testing..."<<endl;
-        vector<double> response;
+        response.resize(nMaps*nLocations*P.X.size(),0.);
+        int v=0;
         for(int i=0;i<nMaps;i++){
             for(int j=0;j<nLocations;j++){
                 for(int k=0;k<nIns;k++){ inputs[k] = Ins[k][j];}
-                P.reset(inputs, Outs[Maps[i][j]]);
+                reset();
                 P.convergeForward(knockoutID[i-1],false);
                 for(int l=0;l<P.X.size();l++){
-                    response.push_back(P.X[l]);
+                    response[v]=P.X[l];
+                    v++;
                 }
             }
         }
+    }
 
-        { // log outputs
-            stringstream fname; fname << logpath << "/outputs.h5";
-            HdfData outdata(fname.str());
-            outdata.add_contained_vals ("error", Error);
-            outdata.add_contained_vals ("responses", response);
-        }
+    void disp(void){
 
-        { // log weights
-            stringstream fname; fname << logpath << "/weights.h5";
-            HdfData weightdata(fname.str());
-            weightdata.add_contained_vals ("weights", P.W);
-            vector<double> flatweightmat = P.getWeightMatrix();
-            weightdata.add_contained_vals ("weightmat", flatweightmat);
-        }
-
-    } break;
-
-
-
-
-
-    case(0): {        // PLOTTING
+        // Field colours
+        vector<vector<double> > cols2;
+        {const double tmp[] = {0.8,0.8,0.8}; cols2.push_back(makeVector(tmp));} // none
+        {const double tmp[] = {1.,0.,0.}; cols2.push_back(makeVector(tmp));} // V1 col
+        {const double tmp[] = {0.,0.,1.}; cols2.push_back(makeVector(tmp));} // S1 col
+        {const double tmp[] = {0.,1.,0.}; cols2.push_back(makeVector(tmp));} // M1 col
+        {const double tmp[] = {1.,0.,1.}; cols2.push_back(makeVector(tmp));} // A1 col
+        {const double tmp[] = {0.,0.,0.}; cols2.push_back(makeVector(tmp));} // mixed
 
         // Displays
         vector<double> fix(3,0.0);
@@ -309,31 +226,23 @@ int main (int argc, char **argv){
         displays[0].resetDisplay(fix,fix,fix);
         displays[0].redrawDisplay();
 
-        {
-            // Loading
-            stringstream fname; fname << logpath << "/weights.h5";
-            HdfData data(fname.str(),1);
-            data.read_contained_vals ("weights", P.W);
-        }
-
-        vector<vector<double> > response;
+        vector<vector<double> > resp;
         {
             stringstream fname; fname << logpath << "/outputs.h5";
             HdfData data(fname.str(),1);
             vector<double> tmp;
             data.read_contained_vals ("responses", tmp);
             int nNodes = tmp.size()/(nMaps*nLocations);
-            response.resize(nMaps*nLocations,vector<double>(nNodes,0.));
+            resp.resize(nMaps*nLocations,vector<double>(nNodes,0.));
             int k=0;
             int l=0;
             for(int i=0;i<nMaps*nLocations;i++){
                 for(int j=0;j<nNodes;j++){
-                    response[k][j]=tmp[l];
+                    resp[k][j]=tmp[l];
                     l++;
                 }
                 k++;
             }
-
         }
 
         double pixelwidth = fmax(fabs(X[10]-X[9]),fabs(Y[10]-Y[9])); // HACK: ASSUMES 10 and 9 are adjacent!
@@ -349,23 +258,15 @@ int main (int argc, char **argv){
         double Yoff = (maxY-minY)*0.5;
 
         for(int j=0;j<nMaps;j++){
-             int ioff = j*nLocations;
+            int ioff = j*nLocations;
 
-            // max field id
-            vector<vector<double> > cols2;
-            {const double tmp[] = {0.8,0.8,0.8}; cols2.push_back(makeVector(tmp));} // none
-            {const double tmp[] = {1.,0.,0.}; cols2.push_back(makeVector(tmp));} // V1 col
-            {const double tmp[] = {0.,0.,1.}; cols2.push_back(makeVector(tmp));} // S1 col
-            {const double tmp[] = {0.,1.,0.}; cols2.push_back(makeVector(tmp));} // M1 col
-            {const double tmp[] = {1.,0.,1.}; cols2.push_back(makeVector(tmp));} // A1 col
-            {const double tmp[] = {0.,0.,0.}; cols2.push_back(makeVector(tmp));} // mixed
             displays[0].resetDisplay(fix,fix,fix);
             for(int i=0;i<nLocations;i++){
                 vector<double> q;
-                for(int j=0;j<nPatterns;j++){
+                for(int k=0;k<nPatterns;k++){
                     double sum = 0.;
-                    for(int k=0;k<outputID.size();k++){
-                        double diff = response[ioff+i][outputID[k]] - Outs[j][k];
+                    for(int l=0;l<outputID.size();l++){
+                        double diff = resp[ioff+i][outputID[l]] - Outs[k][l];
                         sum += diff*diff;
                     }
                     q.push_back(sum);
@@ -382,15 +283,44 @@ int main (int argc, char **argv){
         }
 
         displays[0].closeDisplay();
+    }
+};
 
-    } break;
+
+int main (int argc, char **argv){
+    if(argc<4){
+        cout<<"Usage e.g.: ./build/sim/model 100 12 (where 100 is steps (use 0 to run tests), 12 is seed"<<endl<<flush;
+        return 0;
+    }
+
+    string logpath = argv[1];
+    int K=1;
+    int mode = stoi(argv[2]);
+    if(mode){
+        K = mode;
+        mode = 1;
+    }
+    srand(stoi(argv[3]));
+    stringstream nname; nname << logpath << "/network.h5";
+    Greig M(logpath,nname.str());
+
+    switch(mode){
+        case(1):{           // TRAINING
+
+            M.run(K,1000,100);
+            M.test();
+            M.saveOutputs();
+            M.saveWeights();
+
+        } break;
+
+        case(0): {        // PLOTTING
+            M.disp();
+        } break;
 
     default: {
             cout<<"Invalid mode selected"<<endl;
         } break;
     }
-
-    logfile<<"Goodbye."<<endl;
-    logfile.close();
     return 0;
 }
