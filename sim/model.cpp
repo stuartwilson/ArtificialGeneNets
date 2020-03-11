@@ -5,58 +5,56 @@ using namespace std;
 #include <morph/Config.h>
 using morph::Config;
 
-
 class Context: public Net{
 
 public:
 
+    vector<int> inputID;
+
     Context(string logpath, string nname) : Net(logpath){
 
-
-        /*
-
-        //unsigned int Ntypes = static_cast<unsigned int>(A.size());
-
-        for(int i=0;i<Ntypes;i++){
-            const unsigned int n = A[i].get ("N", 1).asUInt();
-        }
-        */
-
-        // SHOULD BE ABLE TO DEFINE THESE EXTERNALLY
-        float dt = 1.0;
-        float tauW = 2.0;
-        float tauX = 1.0;
-        float tauY = 1.0;
-        float weightNudgeSize = 0.001;
-        float divergenceThreshold = 0.000001;
-        int maxConvergenceSteps = 400;
-
-        HdfData network(nname,1);
-
         Config conf;
-        conf.init ("test.json"); // Should specify in init params?
+        conf.init ("test.json");
+        float dt = conf.getFloat("dt",1.0);
+        float tauW = conf.getFloat("tauW",2.0);
+        float tauX = conf.getFloat("tauX",1.0);
+        float tauY = conf.getFloat("tauY",1.0);
+        float weightNudgeSize = conf.getFloat("weightNudgeSize",0.001);
+        float divergenceThreshold = conf.getFloat("divergenceThreshold",0.000001);
+        int maxConvergenceSteps = conf.getInt("maxConvergenceSteps",400);
+
         const Json::Value maps = conf.getArray("maps");
         for(int i=0;i<maps.size();i++){
             string fn = maps[i].get("filename", "unknown map").asString();
-            M.push_back(Map(fn));
-            int node = maps[i].get("node",-1).asInt(); // Should use this to attach map to specific node
+            stringstream ss; ss << logpath <<"/"<<fn;
+            logfile<<"Map["<<i<<"]:"<<ss.str()<<endl;
+            int oID = maps[i].get("outputID",-1).asInt();
+            int cID = maps[i].get("contextID",-1).asInt();
+            float cVal = maps[i].get("contextVal",-1.0).asFloat();
+            M.push_back(Map(ss.str(),oID,cID,cVal));
         }
 
+        const Json::Value inp = conf.getArray("inputID");
+        for(int i=0;i<inp.size();i++){
+            inputID.push_back(inp[i].asInt());
+        }
 
-        vector<int> Ntmp(0);
-        network.read_contained_vals ("N", Ntmp);
-        int N = Ntmp[0];
-        vector<int> inputID, outputID, knockoutID, contextID, pre, post;
-        network.read_contained_vals ("inputs", inputID);
-        network.read_contained_vals ("outputs", outputID);
-        network.read_contained_vals ("context", contextID);
+        // CONTEXTS?
+        vector<int> pre, post;
+        HdfData network(nname,1);
         network.read_contained_vals ("pre", pre);
         network.read_contained_vals ("post", post);
 
-        // Additional input to represent which map we are using
-        inputID.push_back(contextID[0]);
+        if(pre.size()!=post.size()){ logfile<<"Pre/Post different sizes ("<<pre.size()<<"/"<<post.size()<<")"<<endl; exit(0);}
+        if(pre.size()<1){ logfile<<"No connections in network!"<<endl; exit(0);}
 
-        P.init (N,inputID,outputID,dt,tauW,tauX,tauY,weightNudgeSize,divergenceThreshold,maxConvergenceSteps);
+        int N = tools::getMax(pre);
+        if(tools::getMax(post)>N){
+            N=tools::getMax(post);
+        }
+        N++;
+
+        P.init (N,inputID,dt,tauW,tauX,tauY,weightNudgeSize,divergenceThreshold,maxConvergenceSteps);
 
         for(int i=0;i<pre.size();i++){ P.connect(pre[i],post[i]); }
 
@@ -66,13 +64,18 @@ public:
 
     }
 
-    void setRandomPattern(void){
-        int mapIndex = floor(morph::Tools::randDouble()*M.size());
-        int locationIndex = floor(morph::Tools::randDouble()*M[mapIndex].N);
-        inputs[0] = M[mapIndex].X[locationIndex];
-        inputs[1] = M[mapIndex].Y[locationIndex];
-        inputs[2]=(double)mapIndex;
-        P.reset(inputs, vector<double>(1,M[mapIndex].F[locationIndex]));
+
+    void setInput(void){
+        P.reset();
+        P.Input[inputID[0]] = M[mapID].X[locID];
+        P.Input[inputID[1]] = M[mapID].Y[locID];
+        P.Input[M[mapID].contextID] = M[mapID].contextVal;
+    }
+
+    void setRandomInput(void){
+        setMap(floor(morph::Tools::randDouble()*M.size()));
+        sampleMap(floor(morph::Tools::randDouble()*M[mapID].N));
+        setInput();
     }
 
     void run(int K, int errorSamplePeriod, int errorSampleSize, bool resetWeights){
@@ -82,15 +85,17 @@ public:
         double errMin = 1e9;
         for(int k=0;k<K;k++){
             if(k%errorSamplePeriod){
-                setRandomPattern();
+                setRandomInput();
                 P.convergeForward(-1,true);
+                P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
                 P.convergeBackward(-1,false);
                 P.weightUpdate();
             } else {
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    setRandomPattern();
+                    setRandomInput();
                     P.convergeForward(-1,false);
+                    P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
                     err += P.getError();
                 }
                 err /= (double)errorSampleSize;
@@ -110,12 +115,11 @@ public:
     }
 
     vector<vector<double> > test(int i){
-        vector<vector<double> > response(P.N,vector<double>(M[i].N,0.));
-        for(int j=0;j<M[i].N;j++){
-            inputs[0] = M[i].X[j];
-            inputs[1] = M[i].Y[j];
-            inputs[2]=(double)i;
-            P.reset(inputs, vector<double>(1,M[i].F[j]));
+        setMap(i);
+        vector<vector<double> > response(P.N,vector<double>(M[mapID].N,0.));
+        for(int j=0;j<M[mapID].N;j++){
+            sampleMap(j);
+            setInput();
             P.convergeForward(-1,false);
             for(int k=0;k<P.N;k++){
                 response[k][j] = P.X[k];
@@ -136,7 +140,7 @@ public:
         for(int j=0;j<M.size();j++){
 
             vector<vector<double> > R = test(j);
-            vector<double> F = R[P.outputID[0]];
+            vector<double> F = R[M[j].outputID];
 
             double minF = +1e9;
             double maxF = -1e9;
@@ -171,7 +175,7 @@ public:
 
 int main (int argc, char **argv){
     if(argc<4){
-        cout<<"Usage e.g.: ./build/sim/model 100 12 (where 100 is steps (use 0 to run tests), 12 is seed"<<endl<<flush;
+        cout<<"not enough command line arguments"<<endl<<flush;
         return 0;
     }
 

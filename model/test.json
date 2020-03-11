@@ -1,17 +1,5 @@
-
-/*
-* /Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/sighted.h5
-* /Users/stuartwilson/MODELS/gitprojects/ArtificialGeneNets/model/maps/enucleate.h5
-*/
-
 {
-	"maps" : [
-		{
-			"filename" : "maps/sighted.h5",
-			"node" : 1
-		},
-		{	
-			"filename" : "maps/enucleate.h5",
-			"node" : 2			
-		}
+	"inputID" : [0,1],
+	"maps" : [ {"filename" : "sighted.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 0.0},
+		   {"filename" : "enucleate.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 1.0} ]
 }

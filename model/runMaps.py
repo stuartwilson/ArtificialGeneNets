@@ -7,11 +7,6 @@ import sys
 # COMMON
 dstRoot = 'data/expt'
 
-inputs = np.array([0,1],dtype=int)
-outputs = np.array([2],dtype=int)
-context = np.array([3],dtype=int)
-knockouts = np.array([],dtype=int)
-
 if(len(sys.argv)<5):
     print("Specify: Nnodes Nbatch Nsims timesteps")
 
@@ -27,7 +22,6 @@ cullMax = 0.95
 toCull = np.zeros(Nsims,dtype=int)
 for i in range(Nsims):
     toCull[i] = int(cullMax*(i/(Nsims-1))*Nnodes*Nnodes)
-
 
 finErr = np.zeros(Nsims)
 minErr = np.zeros(Nsims)
@@ -45,6 +39,8 @@ while(running):
 
         dst = dstRoot+str(j)
         subprocess.run('mkdir '+dst,shell=True)
+        subprocess.run('cp maps/sighted.h5 '+dst+'/sighted.h5',shell=True)
+        subprocess.run('cp maps/enucleate.h5 '+dst+'/enucleate.h5',shell=True)
 
         ### NETWORK SPEC
         N = Sizes[j]
@@ -57,11 +53,6 @@ while(running):
 
         ###
         h5f = h5py.File(dst+'/network.h5','w')
-        h5f.create_dataset('N', data=Narr)
-        h5f.create_dataset('inputs', data=inputs)
-        h5f.create_dataset('outputs', data=outputs)
-        h5f.create_dataset('knockouts', data=knockouts)
-        h5f.create_dataset('context', data=context)
         h5f.create_dataset('pre', data=pre)
         h5f.create_dataset('post', data=post)
         h5f.close()

@@ -4,10 +4,10 @@
 using namespace std;
 class Pineda{
 public:
-    int N, Nweight, Nplus1, Nouts, Nins, maxConvergenceSteps;
-    vector<double> W, X, Input, Target, U, Wbest, Y, F, V, Fprime;
+    int N, Nweight, Nplus1, Nins, maxConvergenceSteps;
+    vector<double> W, X, Input, Target, U, Wbest, Y, F, V, Fprime, J;
     double dt, dtOverTauX, dtOverTauY, dtOverTauW;
-    vector<int> Pre, Post, inputID, outputID;
+    vector<int> Pre, Post, inputID;
     double zero, weightNudgeSize, divergenceThreshold;
     vector<double*> Wptr;
 
@@ -15,12 +15,12 @@ public:
 
     }
 
-    Pineda(int N, vector<int> inputID, vector<int> outputID, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
+    Pineda(int N, vector<int> inputID, double dt, double tauW, double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
 
-        init(N, inputID, outputID, dt, tauW, tauX, tauY, weightNudgeSize, divergenceThreshold, maxConvergenceSteps);
+        init(N, inputID, dt, tauW, tauX, tauY, weightNudgeSize, divergenceThreshold, maxConvergenceSteps);
     }
     
-    void init(int N, vector<int> inputID, vector<int> outputID, double dt, double tauW,
+    void init(int N, vector<int> inputID, double dt, double tauW,
 
         double tauX, double tauY, double weightNudgeSize, double divergenceThreshold, int maxConvergenceSteps){
 
@@ -29,9 +29,9 @@ public:
         U.resize(N,0.);
         Y.resize(N,0.);
         F.resize(N,0.);
+        J.resize(N,0.);
         Fprime.resize(N,0.);
         this->inputID = inputID;
-        this->outputID = outputID;
         Nplus1 = N; // overwrite if bias
         this->weightNudgeSize= weightNudgeSize;
         this->divergenceThreshold= divergenceThreshold * N;
@@ -74,7 +74,6 @@ public:
 
     void setNet(void){
         Nweight = W.size();
-        Nouts = outputID.size();
         Nins = inputID.size();
         Wbest = W;
 
@@ -90,6 +89,7 @@ public:
         }
     }
 
+    /*
     void reset(vector<double> input, vector<double> target){
 
         std::fill(X.begin(),X.end()-1,0.);
@@ -98,6 +98,12 @@ public:
             Input[inputID[i]] = input[i];
         }
         Target = target;
+    }
+    */
+    void reset(void){
+        std::fill(X.begin(),X.end()-1,0.);
+        std::fill(Y.begin(),Y.end()-1,0.);
+        std::fill(Input.begin(),Input.end(),0.);
     }
 
 
@@ -120,6 +126,13 @@ public:
 
     }
 
+    void setError(vector<int> oID, vector<double> targetOutput){
+        std::fill(J.begin(),J.end(),0.);
+        for(int i=0;i<oID.size();i++){
+            J[oID[i]] = targetOutput[i]-X[oID[i]];
+        }
+    }
+
 
     void backward(void){
 
@@ -134,13 +147,10 @@ public:
         for(int k=0;k<Nweight;k++){
             V[Pre[k]] += Fprime[Post[k]] * W[k] * Y[Post[k]];
         }
+        
         //#pragma omp parallel for
         for(int i=0;i<N;i++){
-            Y[i] +=dtOverTauY * (V[i] - Y[i]);
-        }
-        //#pragma omp parallel for
-        for(int i=0;i<Nouts;i++){
-            Y[outputID[i]] +=dtOverTauY* (Target[i]-X[outputID[i]]);
+            Y[i] +=dtOverTauY * (V[i] - Y[i] + J[i]);
         }
     }
 
@@ -154,18 +164,11 @@ public:
 
     double getError(void){
         double error = 0.;
-        for(int i=0;i<Nouts;i++){
-            error += (Target[i]-X[outputID[i]])*(Target[i]-X[outputID[i]]);
+        for(int i=0;i<N;i++){
+            error += J[i]*J[i];
         }
         return error * 0.5;
-    }
 
-    vector<double> getOutput(void){
-        vector<double> outp(Nouts);
-        for(int i=0;i<Nouts;i++){
-            outp[i] = X[outputID[i]];
-        }
-        return outp;
     }
 
     vector<double> getWeightMatrix(void){
