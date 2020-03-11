@@ -1,5 +1,0 @@
-{
-	"inputID" : [0,1],
-	"maps" : [ {"filename" : "sighted.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 0.0},
-		   {"filename" : "enucleate.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 1.0} ]
-}
