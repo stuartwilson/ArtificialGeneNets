@@ -21,9 +21,10 @@ class Map{
         vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
         vector<double> X, Y, Z, F;
         double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF;
-        int ncols, nrows;
+        int ncols, nrows, outputID, contextID;
+        double contextVal;
 
-    Map(string filename){
+    void init(string filename){
         HdfData network(filename,1);
         network.read_contained_vals ("X", X);
         network.read_contained_vals ("Y", Y);
@@ -63,6 +64,22 @@ class Map{
         ncols = uniqueX.size();
         nrows = uniqueY.size();
     }
+
+    Map(string filename){
+        init(filename);
+    }
+
+    Map(string filename,int outputID){
+        init(filename);
+        this->outputID = outputID;
+    }
+
+    Map(string filename,int outputID, int contextID, double contextVal){
+        init(filename);
+        this->outputID = outputID;
+        this->contextID = contextID;
+        this->contextVal = contextVal;
+    }
 };
 
 class Net{
@@ -73,6 +90,7 @@ public:
     vector<double> inputs, Error, response;
     Pineda P;
     vector<Map> M;
+    int mapID, locID;
 
     Net(string logpath){
         this->logpath = logpath;
@@ -108,6 +126,10 @@ public:
         logfile<<"Goodbye."<<endl;
         logfile.close();
     }
+
+    void setMap(int i){ mapID = i; }
+
+    void sampleMap(int j){ locID = j; }
 
     void plotMaps(void){
 
