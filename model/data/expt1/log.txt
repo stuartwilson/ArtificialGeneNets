@@ -1,3 +1,0 @@
-Hello.
-steps: 0% (0)
-Goodbye.
