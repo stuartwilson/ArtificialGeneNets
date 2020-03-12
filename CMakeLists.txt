@@ -91,7 +91,7 @@ message(WARNING "There's no pkg-config on this system to check for libmorphologi
 "You can set MORPH_LIB with `cmake -DMORPH_LIB=/pathto/lib` ...")
 endif()
 
-add_subdirectory(sim)
+add_subdirectory(src)
 
 # For debugging of variables:
 set(DEBUG_VARIABLES OFF)
