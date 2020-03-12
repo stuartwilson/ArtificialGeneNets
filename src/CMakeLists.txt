@@ -1,0 +1,9 @@
+enable_language(CXX)
+
+add_executable(model model.cpp)
+target_compile_definitions(model PUBLIC FLT=float COMPILE_PLOTTING)
+target_link_libraries(model ${OpenCV_LIBS} ${MORPH_LDFLAGS} ${HDF5LIBLINK} ${JSONLIBLINK})
+
+add_executable(greig greig.cpp)
+target_compile_definitions(greig PUBLIC FLT=float COMPILE_PLOTTING)
+target_link_libraries(greig ${OpenCV_LIBS} ${MORPH_LDFLAGS} ${HDF5LIBLINK} ${JSONLIBLINK})
