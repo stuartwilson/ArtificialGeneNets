@@ -39,9 +39,9 @@ while(running):
 
         dst = dstRoot+str(j)
         subprocess.run('mkdir '+dst,shell=True)
-        subprocess.run('cp configs/configEnucleateOriginal.json '+dst+'/config.json',shell=True)
-        subprocess.run('cp maps/sighted.h5 '+dst+'/sighted.h5',shell=True)
-        subprocess.run('cp maps/enucleate.h5 '+dst+'/enucleate.h5',shell=True)
+        subprocess.run('cp configs/config1out1ctxt.json '+dst+'/config.json',shell=True)
+        subprocess.run('cp configs/maps/sighted.h5 '+dst+'/ctrl.h5',shell=True)
+        subprocess.run('cp configs/maps/enucleate.h5 '+dst+'/expt.h5',shell=True)
 
         ### NETWORK SPEC
         N = Sizes[j]
@@ -60,7 +60,7 @@ while(running):
 
         ###
         #subprocess.run('cp inputs.h5 '+dst+'/inputs.h5',shell=True)
-        P = np.hstack([P,subprocess.Popen('./../build/sim/hmap '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+        P = np.hstack([P,subprocess.Popen('./../build/src/model '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
 
         ###
         running=j<(Nsims-1)
@@ -90,7 +90,7 @@ while(running):
         print(k)
 
     ### store results periodically
-    h5f = h5py.File('summary.h5','w')
+    h5f = h5py.File('data/summary.h5','w')
     h5f.create_dataset('finErr', data=finErr)
     h5f.create_dataset('minErr', data=minErr)
     h5f.close()

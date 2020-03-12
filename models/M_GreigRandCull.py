@@ -33,11 +33,11 @@ def getMap(fname):
 
 L = np.zeros([5])
 
-x,y,w,L[0] = getMap('images/greig/wild.png')
-x,y,ko1,L[1] = getMap('images/greig/coup.png')
-x,y,ko2,L[2] = getMap('images/greig/pax6.png')
-x,y,ko3,L[3] = getMap('images/greig/sp8.png')
-x,y,ko4,L[4] = getMap('images/greig/emx2.png')
+x,y,w,L[0] = getMap('configs/data/greig/wild.png')
+x,y,ko1,L[1] = getMap('configs/data/greig/coup.png')
+x,y,ko2,L[2] = getMap('configs/data/greig/pax6.png')
+x,y,ko3,L[3] = getMap('configs/data/greig/sp8.png')
+x,y,ko4,L[4] = getMap('configs/data/greig/emx2.png')
 
 minL = int(np.min(L))
 x = x[:minL]
@@ -120,7 +120,6 @@ while(running):
         for c in range(toCull[j]):
             pre, post = cullRand(pre,post)
 
-        ###
         h5f = h5py.File(dst+'/network.h5','w')
         h5f.create_dataset('inputs', data=inputs)
         h5f.create_dataset('outputs', data=outputs)
@@ -134,11 +133,8 @@ while(running):
         h5f.create_dataset('maps', data=maps)
         h5f.close()
 
-        ###
-        #subprocess.run('cp inputs.h5 '+dst+'/inputs.h5',shell=True)
-        P = np.hstack([P,subprocess.Popen('./../build/sim/greig '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+        P = np.hstack([P,subprocess.Popen('./../build/src/greig '+dst+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
 
-        ###
         running=j<(Nsims-1)
         j+=1
 
@@ -166,7 +162,7 @@ while(running):
         print(k)
 
     ### store results periodically
-    h5f = h5py.File('summary.h5','w')
+    h5f = h5py.File('data/summary.h5','w')
     h5f.create_dataset('finErr', data=finErr)
     h5f.create_dataset('minErr', data=minErr)
     h5f.close()
