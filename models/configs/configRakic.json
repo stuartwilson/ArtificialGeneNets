@@ -1,0 +1,10 @@
+{
+	"inputID" : [0,1],
+	"maps" : [ 
+			{"filename" : "gene1.h5", 	"outputID" : 2},
+			{"filename" : "gene2.h5", 	"outputID" : 3},
+			{"filename" : "gene3.h5", 	"outputID" : 4},
+			{"filename" : "gene4.h5", 	"outputID" : 5},
+			{"filename" : "gene5.h5", 	"outputID" : 6}
+		]
+}

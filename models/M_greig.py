@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-from conns import *
+from tools import *
 import subprocess
 import sys
 import pylab as pl
