@@ -12,24 +12,24 @@ def getImgData(fname):
     print(Q.shape)
     X = np.array([],dtype=int)
     Y = np.array([],dtype=int)
-    Z = np.array([],dtype=int)
+    F = np.array([],dtype=int)
     Imax = 1./np.max(I.shape)
     for y in range(I.shape[0]):
         for x in range(I.shape[1]):
             if (I[y,x,3]):
                 X = np.hstack([X,x*Imax])
                 Y = np.hstack([Y,(I.shape[0]-y-1)*Imax])
-                Z = np.hstack([Z,Q[y,x]])
+                F = np.hstack([F,Q[y,x]])
 
-    return X,Y,Z
+    return X,Y,F
 
-X,Y,Z = getImgData(sys.argv[1])
+X,Y,F = getImgData(sys.argv[1]+'.png')
 
-h5f = h5py.File(sys.argv[2],'w')
+h5f = h5py.File(sys.argv[1]+'.h5','w')
 h5f.create_dataset('X', data=X)
 h5f.create_dataset('Y', data=Y)
 h5f.create_dataset('Z', data=np.zeros([len(X)]))
-h5f.create_dataset('F', data=Z)
+h5f.create_dataset('F', data=1-F/np.max(F))
 h5f.close()
 
 '''
