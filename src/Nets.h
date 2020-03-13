@@ -22,8 +22,8 @@ class Map{
         int N;
         vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
         vector<double> X, Y, Z, F;
-        double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF;
-        int ncols, nrows, outputID, contextID;
+        double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, ySep;
+        int outputID, contextID;
         double contextVal;
 
     void init(string filename){
@@ -37,34 +37,30 @@ class Map{
             cout<<"X, Y, Z, F not all the same size... all kinds of badness!"<<endl;
         }
         N = X.size();
-        Xscaled.resize(N);
-        Yscaled.resize(N);
-        Zscaled.resize(N);
-        Fscaled.resize(N);
 
-        minX = minY = minZ = minF = +1e9;
-        maxX = maxY = maxZ = maxF = -1e9;
-        for(int i=0;i<N;i++){
-            if(X[i]<minX){ minX = X[i]; }
-            if(Y[i]<minY){ minY = Y[i]; }
-            if(Z[i]<minZ){ minZ = Z[i]; }
-            if(F[i]<minF){ minF = F[i]; }
-            if(X[i]>maxX){ maxX = X[i]; }
-            if(Y[i]>maxY){ maxY = Y[i]; }
-            if(Z[i]>maxZ){ maxZ = Z[i]; }
-            if(F[i]>maxF){ maxF = F[i]; }
-        }
-        for(int i=0;i<N;i++){
-            Xscaled[i] = (X[i]-minX)/(maxX-minX);
-            Yscaled[i] = (Y[i]-minY)/(maxY-minY);
-            Zscaled[i] = (Z[i]-minZ)/(maxZ-minZ);
-            Fscaled[i] = (F[i]-minF)/(maxF-minF);
-        }
+        minX = tools::getMin(X);
+        minY = tools::getMin(Y);
+        minZ = tools::getMin(Z);
+        minF = tools::getMin(F);
+        maxX = tools::getMax(X);
+        maxY = tools::getMax(Y);
+        maxZ = tools::getMax(Z);
+        maxF = tools::getMax(F);
+        Xscaled = tools::getRenormedVector(X);
+        Yscaled = tools::getRenormedVector(Y);
+        Zscaled = tools::getRenormedVector(Z);
+        Fscaled = tools::getRenormedVector(F);
+
+        double maxDim = maxX-minX;
+        if((maxY-minY)>maxDim){ maxDim = maxY-minY; };
+        xScale = (maxX-minX)/maxDim;
+        yScale = (maxY-minY)/maxDim;
+
         // deduce number of rows and columns
-        vector<double> uniqueX = getUnique(X);
-        vector<double> uniqueY = getUnique(Y);
-        ncols = uniqueX.size();
-        nrows = uniqueY.size();
+        vector<double> uniqueX = tools::getUnique(X);
+        vector<double> uniqueY = tools::getUnique(Y);
+        xSep = xScale/(uniqueX.size()-1);
+        ySep = yScale/(uniqueY.size()-1);
     }
 
     Map(string filename){
@@ -202,8 +198,9 @@ public:
             displays[0].resetDisplay(fix,fix,fix);
 
             for(int i=0;i<M[j].N;i++){
-                vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
-                displays[0].drawRect(M[j].Xscaled[i]-0.5,M[j].Yscaled[i]-0.5,0.,1./(M[j].ncols-1),1./(M[j].nrows-1),rgb);
+                //vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
+                vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
+                displays[0].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
             }
             stringstream ss; ss<< logpath << "/m_" << j << ".png";
             displays[0].saveImage(ss.str().c_str());
@@ -246,8 +243,9 @@ public:
             displays[0].resetDisplay(fix,fix,fix);
 
             for(int i=0;i<M[j].N;i++){
-                vector<double> rgb = morph::Tools::getJetColor(F[i]);
-                displays[0].drawRect(M[j].Xscaled[i]-0.5,M[j].Yscaled[i]-0.5,0.,1./(M[j].ncols-1),1./(M[j].nrows-1),rgb);
+                //vector<double> rgb = morph::Tools::getJetColor(F[i]);
+                vector<double> rgb = morph::Tools::getGrayScaleColor(F[i]);
+                displays[0].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
             }
             stringstream ss; ss<< logpath << "/x_" << j << ".png";
             displays[0].saveImage(ss.str().c_str());
