@@ -15,17 +15,19 @@ src = [ 'configs/configRakic.json',
         s+'8_Emx2.h5',
         s+'6_Couptf1.h5',
         s+'28_Sp8.h5',
-        s+'23_Pax6.h5']
+        s+'23_Pax6.h5',
+        s+'24_RORbeta.h5']
 
 dst = [ 'config.json',
         'gene1.h5',
         'gene2.h5',
         'gene3.h5',
         'gene4.h5',
-        'gene5.h5']
+        'gene5.h5',
+        'gene6.h5']
 
-#runCull(Nnodes, Nbatch, Nsims, t, src, dst)
-run([7,21],Nbatch,Nsims,t,src,dst)
+runCull(Nnodes, Nbatch, Nsims, t, src, dst)
+#run([8,21],Nbatch,Nsims,t,src,dst)
 
 '''
 '1_BMPs.h5'
