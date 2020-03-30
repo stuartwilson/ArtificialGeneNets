@@ -182,32 +182,6 @@ public:
 
     void sampleMap(int j){ locID = j; }
 
-    void plotMaps(void){
-
-        // Displays
-        vector<double> fix(3,0.0);
-        vector<Gdisplay> displays;
-        displays.push_back(Gdisplay(600, 600, 0, 0, "Map", 1.3, 0.0, 0.0));
-        displays[0].resetDisplay(fix,fix,fix);
-        displays[0].redrawDisplay();
-
-        // plot supplied map values
-        for(int j=0;j<M.size();j++){
-
-            displays[0].resetDisplay(fix,fix,fix);
-            displays[0].resetDisplay(fix,fix,fix);
-
-            for(int i=0;i<M[j].N;i++){
-                //vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
-                vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
-                displays[0].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
-            }
-            stringstream ss; ss<< logpath << "/m_" << j << ".png";
-            displays[0].saveImage(ss.str().c_str());
-            displays[0].redrawDisplay();
-        }
-    }
-
     vector<vector<double> > test(int i){
         // return response of every node at each location in map i
 
@@ -224,35 +198,59 @@ public:
         return response;
     }
 
+    void plotMaps(void){
+
+        // Displays
+        vector<double> fix(3,0.0);
+        vector<Gdisplay> disp1;
+        for(int j=0;j<M.size();j++){ disp1.push_back(Gdisplay(600, 600, 0, 0, "Map", 1.3, 0.0, 0.0)); }
+        for(int j=0;j<M.size();j++){ disp1[j].resetDisplay(fix,fix,fix); }
+
+        // plot supplied map values
+        for(int j=0;j<M.size();j++){
+            disp1[j].resetDisplay(fix,fix,fix);
+            for(int i=0;i<M[j].N;i++){
+                //vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
+                vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
+                disp1[j].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
+            }
+        }
+        for(int j=0;j<M.size();j++){
+            stringstream ss; ss<< logpath << "/x_" << j << ".png";
+            disp1[j].saveImage(ss.str().c_str());
+        }
+        for(int j=0;j<M.size();j++){ disp1[j].redrawDisplay(); }
+        for(int j=0;j<M.size();j++){ disp1[j].closeDisplay(); }
+
+    }
+
     void plotResponses(void){
 
         // Displays
         vector<double> fix(3,0.0);
-        vector<Gdisplay> displays;
-        displays.push_back(Gdisplay(600, 600, 0, 0, "Response", 1.3, 0.0, 0.0));
-        displays[0].resetDisplay(fix,fix,fix);
-        displays[0].redrawDisplay();
+        vector<Gdisplay> disp2;
+        for(int j=0;j<M.size();j++){ disp2.push_back(Gdisplay(600, 600, 0, 0, "Map", 1.3, 0.0, 0.0)); }
+
+        for(int j=0;j<M.size();j++){ disp2[j].resetDisplay(fix,fix,fix); }
 
         for(int j=0;j<M.size();j++){
-
+            disp2[j].resetDisplay(fix,fix,fix);
             vector<vector<double> > R = test(j);
             vector<double> F = R[M[j].outputID];
             F = getRenormedVector(F);
 
-            displays[0].resetDisplay(fix,fix,fix);
-            displays[0].resetDisplay(fix,fix,fix);
-
             for(int i=0;i<M[j].N;i++){
                 //vector<double> rgb = morph::Tools::getJetColor(F[i]);
                 vector<double> rgb = morph::Tools::getGrayScaleColor(F[i]);
-                displays[0].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
+                disp2[j].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
             }
-            stringstream ss; ss<< logpath << "/x_" << j << ".png";
-            displays[0].saveImage(ss.str().c_str());
-            displays[0].redrawDisplay();
         }
-
-        displays[0].closeDisplay();
+        for(int j=0;j<M.size();j++){
+            stringstream ss; ss<< logpath << "/m_" << j << ".png";
+            disp2[j].saveImage(ss.str().c_str());
+        }
+        for(int j=0;j<M.size();j++){ disp2[j].redrawDisplay(); }
+        for(int j=0;j<M.size();j++){ disp2[j].closeDisplay(); }
     }
 
     void setInput(void){
