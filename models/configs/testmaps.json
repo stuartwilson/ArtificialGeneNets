@@ -1,0 +1,9 @@
+{
+	"inputID" : [0,1],
+	"maps" : [ 
+			{"filename" : "configs/maps/ucd/17_290_c.h5", 	"outputID" : 2},
+			{"filename" : "configs/maps/ucd/17_291_c.h5", 	"outputID" : 2}
+		]
+}
+
+#17_290_c.h5#17_291_c.h5#17_292_c.h5#17_294_c.h5#17_295_c.h5#17_299_c.h5#18_159_c.h5#18_160_c.h5#19_18_c.h5#19_46_c.h5#19_47_c.h5#19_50_c.h5
