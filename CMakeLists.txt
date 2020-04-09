@@ -1,6 +1,6 @@
 # AUTOMOC requires 2.8.6. Per-target include directories would require 2.8.8
 cmake_minimum_required(VERSION 2.8.8)
-project(gcal)
+project(ArtificialGeneNets)
 
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  (This can be changed with `cmake -DCMAKE_INSTALL_PREFIX=/some/place`")
@@ -67,6 +67,8 @@ set (HDF5LIBLINK ${HDF5_C_${LIB_TYPE}_LIBRARY})
 set (JSONLIBLINK jsoncpp)
 endif(APPLE)
 
+find_package(glfw3 QUIET)
+
 include_directories(${OpenCV_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR} ${GLUT_INCLUDE_DIR} ${X11_INC_SEARCH_PATH} ${HDF5_INCLUDE_DIR})
 
 # Find libmorphologica using pkgconfig
@@ -83,6 +85,7 @@ pkg_check_modules(MORPH REQUIRED libmorphologica)
 if (MORPH_FOUND)
 message(STATUS "pkg_config found libmorphologica")
 include_directories(${MORPH_INCLUDEDIR})
+include_directories(${MORPH_INCLUDEDIR}/morph)
 else()
 message(FATAL_ERROR "You need libmorphologica from github.com/ABRG_Models/morphologica")
 endif(MORPH_FOUND)
@@ -92,6 +95,11 @@ message(WARNING "There's no pkg-config on this system to check for libmorphologi
 endif()
 
 add_subdirectory(src)
+
+# On Apple, have to explicitly add the X11 library directory
+if(APPLE)
+  link_directories(/usr/X11R6/lib)
+endif()
 
 # For debugging of variables:
 set(DEBUG_VARIABLES OFF)

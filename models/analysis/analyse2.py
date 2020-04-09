@@ -26,6 +26,8 @@ noConn = np.where(W==0)
 Wimg = W.copy()
 Wimg[noConn] = np.NaN
 
+print(Wimg)
+
 F = pl.figure(figsize=(10,6))
 f = F.add_subplot(121)
 g = f.pcolor(Wimg,cmap='jet')

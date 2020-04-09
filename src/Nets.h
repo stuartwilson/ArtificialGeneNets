@@ -210,8 +210,8 @@ public:
         for(int j=0;j<M.size();j++){
             disp1[j].resetDisplay(fix,fix,fix);
             for(int i=0;i<M[j].N;i++){
-                //vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
-                vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
+                vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
+                //vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
                 disp1[j].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
             }
         }
