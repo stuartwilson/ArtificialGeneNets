@@ -3,8 +3,10 @@
  */
 
 #include "OpenGL/gl3.h"
+//#include "GL3/gl3.h"
 #include "morph/HdfData.h"
 #include "morph/Visual.h"
+#include "morph/QuadsVisual.h"
 #include "morph/ColourMap.h"
 #include "morph/tools.h"
 #include <morph/Config.h>
@@ -15,6 +17,7 @@ using morph::Config;
 using morph::Visual;
 using morph::ColourMapType;
 using morph::Tools;
+using morph::QuadsVisual;
 
 using namespace tools;
 
@@ -253,6 +256,7 @@ public:
     void plotMaps(void){
         for(int j=0;j<M.size();j++){
             Visual v (500, 500, "Map");
+            v.backgroundWhite();
             v.zNear = 0.001;
             v.zFar = 20;
             v.fov = 45;
@@ -264,6 +268,7 @@ public:
             vector<float> fFlt;
             for (unsigned int i=0; i<M[j].N; i++){ fFlt.push_back (static_cast<float>(M[j].Fscaled[i])); }
             v.addQuadsVisual (&M[j].quads, offset, fFlt, scale, morph::ColourMapType::Viridis);
+            //v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
             v.render();
             v.render();
             stringstream ss; ss<< logpath << "/m_" << j << ".png";
@@ -277,6 +282,7 @@ public:
             vector<double> F = R[M[j].outputID];
             F = getRenormedVector(F);
             Visual v (500, 500, "Response");
+            v.backgroundWhite();
             v.zNear = 0.001;
             v.zFar = 20;
             v.fov = 45;
@@ -288,6 +294,7 @@ public:
             vector<float> fFlt;
             for (unsigned int i=0; i<M[j].N; i++){ fFlt.push_back (static_cast<float>(F[i])); }
             v.addQuadsVisual (&M[j].quads, offset, fFlt, scale, morph::ColourMapType::Viridis);
+            //v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
             v.render();
             v.render();
             stringstream ss; ss<< logpath << "/x_" << j << ".png";
