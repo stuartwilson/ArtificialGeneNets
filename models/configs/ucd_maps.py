@@ -28,6 +28,8 @@ for i in range(n-1):
     F = np.hstack([F,f])
 A.close()
 
+#print(str(len(X))+','+str(len(Y))+','+str(len(F)))
+
 Y = Y - np.min(Y)
 X = X*np.max(Y)
 

@@ -27,8 +27,8 @@ h5f.create_dataset('post', data=post)
 h5f.close()
 
 # Run the model
-os.system('./../build/src/model '+dir+' '+str(steps)+' '+str(seed))
+os.system('./../build/src/modelVis '+dir+' '+str(steps)+' '+str(seed))
 
-print("run './../build/src/model "+dir+" 0 0' to see the results")
+print("run './../build/src/modelVis "+dir+" 0 0' to see the results")
 
 
