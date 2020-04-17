@@ -1,0 +1,7 @@
+{
+	"inputID" : [0,1],
+	"maps" : [ {"filename" : "ctrl1.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 0.0},
+		   {"filename" : "expt1.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 1.0},
+		   {"filename" : "ctrl2.h5", 	"outputID" : 4, "contextID" : 2, "contextVal" : 0.0},
+		   {"filename" : "expt2.h5", 	"outputID" : 4, "contextID" : 2, "contextVal" : 1.0}]
+}
