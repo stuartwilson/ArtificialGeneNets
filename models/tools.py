@@ -70,7 +70,7 @@ def runCull(Nnodes, Nbatch, Nsims, t, src, dst, loc='data', cullMax=0.95):
             h5f.create_dataset('pre', data=pre)
             h5f.create_dataset('post', data=post)
             h5f.close()
-            P = np.hstack([P,subprocess.Popen('./../build/src/model '+dir+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+            P = np.hstack([P,subprocess.Popen('./../build/src/modelVis '+dir+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
             running=j<(Nsims-1)
             j+=1
         waitUntilReady(P)
@@ -133,7 +133,7 @@ def run(Nnodes, Nbatch, Nsims, t, src, dst, loc='data'):
             h5f.create_dataset('pre', data=pre)
             h5f.create_dataset('post', data=post)
             h5f.close()
-            P = np.hstack([P,subprocess.Popen('./../build/src/model '+dir+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+            P = np.hstack([P,subprocess.Popen('./../build/src/modelVis '+dir+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
             running=j<(Nsims-1)
             j+=1
         waitUntilReady(P)
