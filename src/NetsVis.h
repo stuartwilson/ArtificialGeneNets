@@ -23,6 +23,7 @@ using morph::ColourMapType;
 using morph::Tools;
 using morph::QuadsVisual;
 using morph::Scale;
+using morph::HdfData;
 
 using namespace tools;
 
