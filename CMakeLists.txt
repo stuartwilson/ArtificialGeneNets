@@ -38,7 +38,7 @@ else()
 if (CMAKE_CXX_COMPILER_ID MATCHES Intel)
 set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -xHOST -O3 -qopenmp -D__ICC__")
 else() # GCC
-set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -Wno-unused-result -Wno-unknown-pragmas -march=native -O3 -fopenmp")
+set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -Wfatal-errors -g -Wno-unused-result -Wno-unknown-pragmas -march=native -O3 -fopenmp")
 endif()
 endif()
 
