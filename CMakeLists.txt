@@ -1,5 +1,5 @@
 # AUTOMOC requires 2.8.6. Per-target include directories would require 2.8.8
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.1)
 project(ArtificialGeneNets)
 
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
@@ -20,6 +20,8 @@ else()
 message(ERROR "Operating system not supported: " ${CMAKE_SYSTEM})
 endif()
 
+set (CMAKE_CXX_STANDARD 17)
+
 # Add the host definition to CXXFLAGS along with other switches
 if (APPLE)
 # OpenMP: According to
@@ -30,20 +32,25 @@ if (APPLE)
 # in that post, as I don't use any of the runtime library OpenMP
 # features. However, the code did not compile without it, so we've moved the links to omp to the later apple if case.
 #
-set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -std=c++11 -Xpreprocessor -fopenmp")
-
+set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -Xpreprocessor -fopenmp")
 else()
 # To use Intel compiler, call cmake as: cmake -DCMAKE_CXX_COMPILER=icpc ..
 if (CMAKE_CXX_COMPILER_ID MATCHES Intel)
-set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -std=c++11 -xHOST -O3 -qopenmp -D__ICC__")
-# No OMP; it goes slower:
-#set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -std=c++11 -xHOST -O3 -D__ICC__")
-# No optimisation at all:
-#set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -std=c++11 -xHOST -O0  -D__ICC__")
+set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -xHOST -O3 -qopenmp -D__ICC__")
 else() # GCC
-set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -g -std=c++11 -Wno-unused-result -Wno-unknown-pragmas -march=native -O3 -fopenmp")
+set(CMAKE_CXX_FLAGS "${MORPH_HOST_DEFINITION} -Wall -Wfatal-errors -g -Wno-unused-result -Wno-unknown-pragmas -march=native -O3 -fopenmp")
 endif()
 endif()
+
+# Be cavalier about comparing signed and unsigned ints ;)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+
+# Important additional GL compiler flags.
+#
+# Use vendor implementations (not legacy softare impl.)
+set(OpenGL_GL_PREFERENCE "GLVND")
+# Important flags to set (perhaps these belong in the morphologica headers)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGL3_PROTOTYPES -DGL_GLEXT_PROTOTYPES")
 
 # Lib finding - we have to do this, so that the correct include paths
 # are present for OpenGL, OpenCV, etc; they're all included by
@@ -109,4 +116,3 @@ foreach (_variableName ${_variableNames})
 message(STATUS "${_variableName}=${${_variableName}}")
 endforeach()
 endif(DEBUG_VARIABLES)
-

@@ -2,14 +2,18 @@
  Implementation of recurrent backprop algorithm following Pineda (1987)
  */
 
-#include "OpenGL/gl3.h"
-//#include "GL3/gl3.h"
+// With the correct OpenGL definitions (-DGL3_PROTOTYPES etc) you probably don't need this for Apple
+#ifdef __OSX__
+# include "OpenGL/gl3.h"
+#endif
+
 #include "morph/HdfData.h"
 #include "morph/Visual.h"
 #include "morph/QuadsVisual.h"
 #include "morph/ColourMap.h"
 #include "morph/tools.h"
 #include <morph/Config.h>
+#include "morph/Scale.h"
 #include "tools.h"
 #include "Pineda.h"
 
@@ -18,6 +22,8 @@ using morph::Visual;
 using morph::ColourMapType;
 using morph::Tools;
 using morph::QuadsVisual;
+using morph::Scale;
+using morph::HdfData;
 
 using namespace tools;
 
@@ -264,11 +270,11 @@ public:
             v.setZDefault(-3.7f);
             v.setSceneTransXY (0.0f,0.0f);
             array<float, 3> offset = { 0., 0., 0.0 };
-            array<float, 2> scale = { 0.0f, 0.0f }; //maybe 0,0?
+            Scale<float> scale;
+            scale.do_autoscale = true;
             vector<float> fFlt;
             for (unsigned int i=0; i<M[j].N; i++){ fFlt.push_back (static_cast<float>(M[j].Fscaled[i])); }
-            v.addQuadsVisual (&M[j].quads, offset, fFlt, scale, morph::ColourMapType::Viridis);
-            //v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
+            v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
             v.render();
             v.render();
             stringstream ss; ss<< logpath << "/m_" << j << ".png";
@@ -290,11 +296,11 @@ public:
             v.setZDefault(-3.7f);
             v.setSceneTransXY (0.0f,0.0f);
             array<float, 3> offset = { 0.0, 0.0, 0.0 };
-            array<float, 2> scale = { 0.0f, 0.0f };
+            Scale<float> scale;
+            scale.do_autoscale = true;
             vector<float> fFlt;
             for (unsigned int i=0; i<M[j].N; i++){ fFlt.push_back (static_cast<float>(F[i])); }
-            v.addQuadsVisual (&M[j].quads, offset, fFlt, scale, morph::ColourMapType::Viridis);
-            //v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
+            v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[j].quads, offset, &fFlt, scale, morph::ColourMapType::Viridis));
             v.render();
             v.render();
             stringstream ss; ss<< logpath << "/x_" << j << ".png";
@@ -352,6 +358,3 @@ public:
     }
 
 };
-
-
-

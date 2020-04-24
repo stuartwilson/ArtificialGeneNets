@@ -1,3 +1,6 @@
+#include <vector>
+using std::vector;
+
 namespace tools{
 
     template <class T>
@@ -72,4 +75,3 @@ namespace tools{
     }
 
 };
-
