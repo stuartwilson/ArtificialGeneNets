@@ -1,16 +1,72 @@
 /*
  Implementation of recurrent backprop algorithm following Pineda (1987)
  */
+
+// With the correct OpenGL definitions (-DGL3_PROTOTYPES etc) you probably don't need this for Apple
+#ifdef __OSX__
+# include "OpenGL/gl3.h"
+#endif
+
 #include "morph/HdfData.h"
-#include "morph/display.h"
+#include "morph/Visual.h"
+#include "morph/QuadsVisual.h"
+#include "morph/HexGridVisual.h"
+#include "morph/ColourMap.h"
 #include "morph/tools.h"
 #include <morph/Config.h>
+#include "morph/Scale.h"
 #include "tools.h"
 #include "Pineda.h"
 
+#include "morph/ReadCurves.h"
+#include "morph/RD_Base.h"
+
 using morph::Config;
-using namespace morph;
+using morph::Visual;
+using morph::ColourMapType;
+using morph::Tools;
+using morph::QuadsVisual;
+using morph::HexGridVisual;
+using morph::Scale;
+using morph::HdfData;
+
 using namespace tools;
+
+
+template <class Flt>
+class Domain : public morph::RD_Base<Flt> {
+public:
+    double ellipseA=1.0;
+    double ellipseB=1.0;
+    virtual void init (void) {
+        this->stepCount = 0;
+    }
+    void setEllipse(double ellipseA, double ellipseB, double hextohex_d){
+        this->ellipseA = ellipseA;
+        this->ellipseB = ellipseB;
+        this->hextohex_d = hextohex_d;
+    }
+    virtual void allocate (void) {
+
+        this->hg = new HexGrid (this->hextohex_d, this->hexspan, 0, morph::HexDomainShape::Boundary);
+            DBG ("Initial hexagonal HexGrid has " << this->hg->num() << " hexes");
+            this->hg->setEllipticalBoundary (ellipseA, ellipseB);
+            // Compute the distances from the boundary
+            this->hg->computeDistanceToBoundary();
+            // Vector size comes from number of Hexes in the HexGrid
+            this->nhex = this->hg->num();
+            DBG ("After setting boundary, HexGrid has " << this->nhex << " hexes");
+            // Spatial d comes from the HexGrid, too.
+            this->set_d(this->hg->getd());
+            DBG ("HexGrid says d = " << this->d);
+            this->set_v(this->hg->getv());
+            DBG ("HexGrid says v = " << this->v);
+    }
+    virtual void step (void) {
+        this->stepCount++;
+    }
+};
+
 
 class Map{
 
@@ -22,9 +78,11 @@ class Map{
         int N;
         vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
         vector<double> X, Y, Z, F;
-        double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, ySep;
+        double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, xOff, yOff;// ySep;
+        vector<double> ySep;
         int outputID, contextID;
         double contextVal;
+        vector<array<float, 12>> quads;
 
     void init(string filename){
         HdfData network(filename,1);
@@ -46,21 +104,70 @@ class Map{
         maxY = tools::getMax(Y);
         maxZ = tools::getMax(Z);
         maxF = tools::getMax(F);
-        Xscaled = tools::getRenormedVector(X);
-        Yscaled = tools::getRenormedVector(Y);
-        Zscaled = tools::getRenormedVector(Z);
-        Fscaled = tools::getRenormedVector(F);
+        Xscaled = tools::normalize(X);
+        Yscaled = tools::normalize(Y);
+        Zscaled = tools::normalize(Z);
+        Fscaled = tools::normalize(F);
 
         double maxDim = maxX-minX;
         if((maxY-minY)>maxDim){ maxDim = maxY-minY; };
         xScale = (maxX-minX)/maxDim;
         yScale = (maxY-minY)/maxDim;
 
-        // deduce number of rows and columns
+        xOff = -0.5*(maxX-minX);
+        yOff = -0.5*(maxY-minY);
+
         vector<double> uniqueX = tools::getUnique(X);
-        vector<double> uniqueY = tools::getUnique(Y);
-        xSep = xScale/(uniqueX.size()-1);
-        ySep = yScale/(uniqueY.size()-1);
+        int cols = uniqueX.size();
+        vector<int> colID(N,0);
+        vector<vector<double> > yByCol(cols);
+        vector<int> count(cols,0);
+        for(int i=0;i<N;i++){
+            for(int j=0;j<cols;j++){
+                if(X[i]==uniqueX[j]){
+                    colID[i]=j;
+                    yByCol[j].push_back(Y[i]);
+                    count[j]++;
+                }
+            }
+        }
+
+        vector<double> yRange(cols);
+        for(int i=0;i<cols;i++){
+            yRange[i] = tools::getMax(yByCol[i])-tools::getMin(yByCol[i]);
+        }
+
+        xSep = 0.5*(maxX-minX)/((double)cols-1);
+
+        for(int i=0;i<N;i++){
+            ySep.push_back(0.5*yRange[colID[i]]/((double)count[colID[i]]-1));
+        }
+
+        array<float, 12> sbox;
+        for (int i=0; i<N; i++) {
+            // corner 1 x,y,z
+            sbox[0] = xScale*(xOff+X[i]-xSep);
+            sbox[1] = yScale*(yOff+Y[i]-ySep[i]);
+            sbox[2] = 0.0;
+            // corner 2 x,y,z
+            sbox[3] = xScale*(xOff+X[i]-xSep);
+            sbox[4] = yScale*(yOff+Y[i]+ySep[i]);
+            sbox[5] = 0.0;
+            // corner 3 x,y,z
+            sbox[6] = xScale*(xOff+X[i]+xSep);
+            sbox[7] = yScale*(yOff+Y[i]+ySep[i]);
+            sbox[8] = 0.0;
+            // corner 4 x,y,z
+            sbox[9] = xScale*(xOff+X[i]+xSep);
+            sbox[10]= yScale*(yOff+Y[i]-ySep[i]);
+            sbox[11]= 0.0;
+            quads.push_back(sbox);
+        }
+
+        outputID = -1; // flag for not set
+        contextID = -1; // flag for not set
+        contextVal = 0.0; // default
+
     }
 
     Map(string filename){
@@ -88,8 +195,16 @@ public:
     vector<double> inputs, Error, response;
     Pineda P;
     vector<Map> M;
+    Domain<double> domain;
+    double xScale, yScale, xOffset, yOffset;
     int mapID, locID;
     vector<int> inputID;
+    vector<int> outputID;
+    vector<int> contextIDs;
+    vector<double> contextVals;
+    int nContext;
+    morph::ColourMapType colourMap;
+
 
     Net(string logpath){
 
@@ -110,6 +225,11 @@ public:
         float divergenceThreshold = conf.getFloat("divergenceThreshold",0.000001);
         int maxConvergenceSteps = conf.getInt("maxConvergenceSteps",400);
 
+        float dx = conf.getFloat("dx",0.02);
+        float yAspect = conf.getFloat("yAspect",0.75);
+        float scaleDomain = conf.getFloat("scaleDomain",1.5);
+
+
         // Read in map info
         const Json::Value maps = conf.getArray("maps");
         for(int i=0;i<maps.size();i++){
@@ -121,6 +241,13 @@ public:
             float cVal = maps[i].get("contextVal",-1.0).asFloat();
             M.push_back(Map(ss.str(),oID,cID,cVal));
         }
+
+        for(int i=0;i<M.size();i++){
+            if(M[i].outputID!=-1){
+                outputID.push_back(M[i].outputID);
+            }
+        }
+        outputID = tools::getUnique(outputID);
 
         const Json::Value inp = conf.getArray("inputID");
         for(int i=0;i<inp.size();i++){
@@ -148,6 +275,55 @@ public:
         P.addBias();
         P.setNet();
         inputs.resize(inputID.size());
+
+        // Define the domain over which it can be evaluated
+        //{ stringstream ss; ss << logpath <<"/domain.svg"; domain.svgpath = ss.str(); }
+        domain.init();
+        domain.setEllipse(1.0,yAspect,dx);
+        domain.allocate();
+
+        double maxX=-1e9;
+        double maxY=-1e9;
+        double minX= 1e9;
+        double minY= 1e9;
+        for(int i=0;i<M.size();i++){
+            if(M[i].maxX>maxX){maxX=M[i].maxX;};
+            if(M[i].maxY>maxY){maxY=M[i].maxY;};
+            if(M[i].minX<minX){minX=M[i].minX;};
+            if(M[i].minY<minY){minY=M[i].minY;};
+        }
+        xOffset = minX+(maxX-minX)*0.5;
+        yOffset = minY+(maxY-minY)*0.5;
+        xScale = (maxX-minX)/(2.0*domain.ellipseA);
+        yScale = xScale;
+
+        xScale *= scaleDomain;
+        yScale *= scaleDomain;
+
+        // identify the unique context conditions
+        vector<int> allContextIDs;
+        vector<double> allContextVals;
+        for(int i=0;i<M.size();i++){
+            if(M[i].contextID!=-1){
+                allContextIDs.push_back(M[i].contextID);
+                allContextVals.push_back(M[i].contextVal);
+            }
+        }
+
+        for(int i=0;i<allContextIDs.size();i++){
+            bool uni = true;
+            for(int k=0;k<contextIDs.size();k++){
+                if((allContextIDs[i]==contextIDs[k]) && (allContextVals[i]==contextVals[k])){
+                    uni = false; break;
+                }
+            } if(uni){
+                contextIDs.push_back(allContextIDs[i]);
+                contextVals.push_back(allContextVals[i]);
+            }
+        }
+        nContext = contextIDs.size();
+
+        setColourMap(morph::ColourMapType::Viridis);
 
     }
 
@@ -182,9 +358,20 @@ public:
 
     void sampleMap(int j){ locID = j; }
 
-    vector<vector<double> > test(int i){
-        // return response of every node at each location in map i
+    void setInput(void){
+        P.reset();
+        P.Input[inputID[0]] = M[mapID].X[locID]; // Training on the supplied x-values
+        P.Input[inputID[1]] = M[mapID].Y[locID];
+        P.Input[M[mapID].contextID] = M[mapID].contextVal;
+    }
 
+    void setRandomInput(void){
+        setMap(floor(morph::Tools::randDouble()*M.size()));
+        sampleMap(floor(morph::Tools::randDouble()*M[mapID].N));
+        setInput();
+    }
+
+    vector<vector<double> > testMap(int i){
         setMap(i);
         vector<vector<double> > response(P.N,vector<double>(M[mapID].N,0.));
         for(int j=0;j<M[mapID].N;j++){
@@ -198,72 +385,30 @@ public:
         return response;
     }
 
-    void plotMaps(void){
+    vector<vector<double> > testDomainContext(int i){
 
-        // Displays
-        vector<double> fix(3,0.0);
-        vector<Gdisplay> disp1;
-        for(int j=0;j<M.size();j++){ disp1.push_back(Gdisplay(600, 600, 0, 0, "Map", 1.3, 0.0, 0.0)); }
-        for(int j=0;j<M.size();j++){ disp1[j].resetDisplay(fix,fix,fix); }
+        vector<vector<double> > R(P.N,vector<double>(domain.nhex,0.));
 
-        // plot supplied map values
-        for(int j=0;j<M.size();j++){
-            disp1[j].resetDisplay(fix,fix,fix);
-            for(int i=0;i<M[j].N;i++){
-                vector<double> rgb = morph::Tools::getJetColor(M[j].Fscaled[i]);
-                //vector<double> rgb = morph::Tools::getGrayScaleColor(M[j].Fscaled[i]);
-                disp1[j].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
+        for (unsigned int j=0; j<domain.nhex; ++j) {
+            P.reset();
+            P.Input[inputID[0]] = domain.hg->vhexen[j]->x*xScale+xOffset;
+            P.Input[inputID[1]] = domain.hg->vhexen[j]->y*yScale+yOffset;
+            P.Input[contextIDs[i]] = contextVals[i];
+            P.convergeForward(-1,false);
+            for(int k=0;k<P.N;k++){
+                R[k][j] = P.X[k];
             }
         }
-        for(int j=0;j<M.size();j++){
-            stringstream ss; ss<< logpath << "/x_" << j << ".png";
-            disp1[j].saveImage(ss.str().c_str());
-        }
-        for(int j=0;j<M.size();j++){ disp1[j].redrawDisplay(); }
-        for(int j=0;j<M.size();j++){ disp1[j].closeDisplay(); }
-
+        return R;
     }
 
-    void plotResponses(void){
+    vector<vector<vector<double> > > testDomains(void){
 
-        // Displays
-        vector<double> fix(3,0.0);
-        vector<Gdisplay> disp2;
-        for(int j=0;j<M.size();j++){ disp2.push_back(Gdisplay(600, 600, 0, 0, "Map", 1.3, 0.0, 0.0)); }
-
-        for(int j=0;j<M.size();j++){ disp2[j].resetDisplay(fix,fix,fix); }
-
-        for(int j=0;j<M.size();j++){
-            disp2[j].resetDisplay(fix,fix,fix);
-            vector<vector<double> > R = test(j);
-            vector<double> F = R[M[j].outputID];
-            F = getRenormedVector(F);
-
-            for(int i=0;i<M[j].N;i++){
-                //vector<double> rgb = morph::Tools::getJetColor(F[i]);
-                vector<double> rgb = morph::Tools::getGrayScaleColor(F[i]);
-                disp2[j].drawRect(M[j].xScale*(M[j].Xscaled[i]-0.5),M[j].yScale*(M[j].Yscaled[i]-0.5),0.,M[j].xSep,M[j].ySep,rgb);
-            }
+        vector<vector<vector<double> > > R;
+        for(int i=0;i<nContext;i++){
+            R.push_back(testDomainContext(i));
         }
-        for(int j=0;j<M.size();j++){
-            stringstream ss; ss<< logpath << "/m_" << j << ".png";
-            disp2[j].saveImage(ss.str().c_str());
-        }
-        for(int j=0;j<M.size();j++){ disp2[j].redrawDisplay(); }
-        for(int j=0;j<M.size();j++){ disp2[j].closeDisplay(); }
-    }
-
-    void setInput(void){
-        P.reset();
-        P.Input[inputID[0]] = M[mapID].X[locID];
-        P.Input[inputID[1]] = M[mapID].Y[locID];
-        P.Input[M[mapID].contextID] = M[mapID].contextVal;
-    }
-
-    void setRandomInput(void){
-        setMap(floor(morph::Tools::randDouble()*M.size()));
-        sampleMap(floor(morph::Tools::randDouble()*M[mapID].N));
-        setInput();
+        return R;
     }
 
     void run(int K, int errorSamplePeriod, int errorSampleSize, bool resetWeights){
@@ -302,7 +447,150 @@ public:
         P.W = P.Wbest;
     }
 
+
+    /*
+        PLOTTING
+    */
+
+    void setColourMap(morph::ColourMapType cmap){
+        colourMap = cmap;
+    }
+
+    void plotMapValues(vector<double> F, string fname, int mapIndex){
+        if(M[mapIndex].N != F.size()){ cout<<"Field supplied not correct size (Map)."<<endl;}
+        Visual v (500, 500, "Map");
+        v.backgroundWhite();
+        v.zNear = 0.001;
+        v.zFar = 20;
+        v.fov = 45;
+        v.sceneLocked = false;
+        v.setZDefault(-3.7f);
+        v.setSceneTransXY (0.0f,0.0f);
+        array<float, 3> offset = { 0., 0., 0.0 };
+        Scale<float> scale;
+        scale.do_autoscale = true;
+        vector<float> fFlt;
+        for (unsigned int i=0; i<M[mapIndex].N; i++){ fFlt.push_back (static_cast<float>(F[i])); }
+        v.addVisualModel (new QuadsVisual<float> (v.shaderprog, &M[mapIndex].quads, offset, &fFlt, scale, colourMap));
+        v.render();
+        v.render();
+        v.saveImage(fname);
+    }
+
+
+    void plotDomainValues(vector<double> F, string fname){
+        if(domain.nhex != F.size()){ cout<<"Field supplied not correct size (domain)"<<endl;}
+        Visual v (500, 500, "Response");
+        v.backgroundWhite();
+        v.zNear = 0.001;
+        v.zFar = 20;
+        v.fov = 45;
+        v.sceneLocked = false;
+        v.setZDefault(-2.7f);
+        v.setSceneTransXY (0.0f,0.0f);
+        array<float, 3> offset = { 0.0, 0.0, 0.0 };
+        Scale<float> scale;
+        scale.do_autoscale = true;
+        Scale<float> zscale; zscale.setParams (0.0f, 0.0f);
+        vector<float> fFlt;
+        for (unsigned int k=0; k<domain.nhex; k++){ fFlt.push_back (static_cast<float>(F[k])); }
+        v.addVisualModel (new HexGridVisual<float> (v.shaderprog, domain.hg, offset, &fFlt, zscale, scale, colourMap));
+        v.render();
+        v.render();
+        v.saveImage(fname);
+    }
+
+
+    // **************************************************** //
+
+    void plotMapTargets(void){
+        for(int i=0;i<M.size();i++){
+            stringstream ss; ss<< logpath << "/targ_map_" << i << ".png";
+            plotMapTarget(i, ss.str().c_str());
+        }
+    }
+
+    void plotMapTarget(int i, string fname){
+        plotMapValues(M[i].Fscaled, fname, i);
+    }
+
+    void plotMapResponsesAllMaps(void){
+        for(int i=0;i<M.size();i++){
+            plotMapResponses(i);
+        }
+    }
+
+    void plotMapResponses(int i){
+        vector<vector<double> > R = testMap(i);
+        for(int j=0;j<R.size();j++){
+            vector<double> F = normalize(R[j]);
+            stringstream ss; ss<< logpath << "/resp_map_" << i << "_node_" << j << ".png";
+            plotMapValues(F, ss.str().c_str(), i);
+        }
+    }
+
+    void plotDomainContext(int i){
+        vector<vector<double> > R = testDomainContext(i);
+        R = tools::normalize(R);
+        for(int j=0;j<R.size();j++){
+            stringstream ss; ss<< logpath << "/context_" << contextIDs[i] << "_val_" << contextVals[i] << "_Node_" << j << "_(indivNorm).png";
+            plotDomainValues(R[j],ss.str().c_str());
+        }
+    }
+
+    void plotDomainsAllContexts(void){
+        vector<vector<vector<double> > > R = testDomains();
+        R = tools::normalize(R);
+        for(int i=0;i<R.size();i++){
+            for(int j=0;j<R[i].size();j++){
+                stringstream ss; ss<< logpath << "/context_" << contextIDs[i] << "_val_" << contextVals[i] << "_Node_" << j << "_(jointNorm).png";
+                plotDomainValues(R[i][j],ss.str().c_str());
+            }
+        }
+    }
+
+    void plotDomainNodeDiff(int contextIndex, int nodeA, int nodeB){
+
+        if(contextIndex>=nContext){cout<<"Invalid context ID "<<contextIndex<<". Only "<<nContext<<"contexts."<<endl;}
+        if(nodeA>=P.N){cout<<"Invalid node ID (A) "<<nodeA<<". Only "<<P.N<<"nodes."<<endl;}
+        if(nodeB>=P.N){cout<<"Invalid node ID (B) "<<nodeB<<". Only "<<P.N<<"nodes."<<endl;}
+
+        vector<vector<double> >  A = testDomainContext(contextIndex);
+        vector<double> diff = A[nodeA];
+        for(int i=0;i<domain.nhex;i++){
+            diff[i] -= A[nodeB][i];
+        }
+        diff = tools::normalize(diff);
+
+        stringstream ss; ss<< logpath << "/DIFF_node_"<<nodeA<<"_minus_node_"<<nodeB<<"_context_" << contextIDs[contextIndex] << "_val_" << contextVals[contextIndex]<<".png";
+        plotDomainValues(diff,ss.str().c_str());
+
+    }
+
+    void plotDomainContextDiff(int nodeIndex, int contextA, int contextB){
+
+        if(contextA>=nContext){cout<<"Invalid context ID (A) "<<contextA<<". Only "<<nContext<<"contexts."<<endl;}
+        if(contextB>=nContext){cout<<"Invalid context ID (B) "<<contextB<<". Only "<<nContext<<"contexts."<<endl;}
+        if(nodeIndex>=P.N){cout<<"Invalid node ID "<<nodeIndex<<". Only "<<P.N<<"nodes."<<endl;}
+
+        vector<vector<double> >  A = testDomainContext(contextA);
+        vector<vector<double> >  B = testDomainContext(contextB);
+        vector<double> diff = A[nodeIndex];
+        for(int i=0;i<domain.nhex;i++){
+            diff[i] -= B[nodeIndex][i];
+        }
+        diff = tools::normalize(diff);
+
+        stringstream ss; ss<< logpath << "/DIFF_context_("<<contextIDs[contextA]<<","<<contextVals[contextA]<<")_minus_context_("<<contextIDs[contextB]<<","<<contextVals[contextB]<<")_node"<<nodeIndex<<".png";
+        plotDomainValues(diff,ss.str().c_str());
+
+    }
+
+    void plotDomainContextDiffOutputNodes(int contextA, int contextB){
+        for(int i=0;i<outputID.size();i++){
+            plotDomainContextDiff(outputID[i], contextA, contextB);
+        }
+
+    }
+
 };
-
-
-
