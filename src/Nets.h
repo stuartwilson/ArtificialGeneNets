@@ -49,18 +49,18 @@ public:
     virtual void allocate (void) {
 
         this->hg = new HexGrid (this->hextohex_d, this->hexspan, 0, morph::HexDomainShape::Boundary);
-            DBG ("Initial hexagonal HexGrid has " << this->hg->num() << " hexes");
-            this->hg->setEllipticalBoundary (ellipseA, ellipseB);
-            // Compute the distances from the boundary
-            this->hg->computeDistanceToBoundary();
-            // Vector size comes from number of Hexes in the HexGrid
-            this->nhex = this->hg->num();
-            DBG ("After setting boundary, HexGrid has " << this->nhex << " hexes");
-            // Spatial d comes from the HexGrid, too.
-            this->set_d(this->hg->getd());
-            DBG ("HexGrid says d = " << this->d);
-            this->set_v(this->hg->getv());
-            DBG ("HexGrid says v = " << this->v);
+        DBG ("Initial hexagonal HexGrid has " << this->hg->num() << " hexes");
+        this->hg->setEllipticalBoundary (ellipseA, ellipseB);
+        // Compute the distances from the boundary
+        this->hg->computeDistanceToBoundary();
+        // Vector size comes from number of Hexes in the HexGrid
+        this->nhex = this->hg->num();
+        DBG ("After setting boundary, HexGrid has " << this->nhex << " hexes");
+        // Spatial d comes from the HexGrid, too.
+        this->set_d(this->hg->getd());
+        DBG ("HexGrid says d = " << this->d);
+        this->set_v(this->hg->getv());
+        DBG ("HexGrid says v = " << this->v);
     }
     virtual void step (void) {
         this->stepCount++;
@@ -71,18 +71,18 @@ public:
 class Map{
 
     /*
-      Structure for storing a map (pre-defined X, Y, Z, F, in a HdfData file)
-    */
+     Structure for storing a map (pre-defined X, Y, Z, F, in a HdfData file)
+     */
 
-    public:
-        int N;
-        vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
-        vector<double> X, Y, Z, F;
-        double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, xOff, yOff;// ySep;
-        vector<double> ySep;
-        int outputID, contextID;
-        double contextVal;
-        vector<array<float, 12>> quads;
+public:
+    int N;
+    vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
+    vector<double> X, Y, Z, F;
+    double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, xOff, yOff;// ySep;
+    vector<double> ySep;
+    int outputID, contextID;
+    double contextVal;
+    vector<array<float, 12>> quads;
 
     void init(string filename){
         HdfData network(filename,1);
@@ -325,8 +325,8 @@ public:
 
         setColourMap(morph::ColourMapType::Viridis);
 
-	setMap(0);
-	sampleMap(0);
+        setMap(0);
+        sampleMap(0);
 
     }
 
@@ -365,10 +365,10 @@ public:
         P.reset();
         P.Input[inputID[0]] = M[mapID].X[locID]; // Training on the supplied x-values
         P.Input[inputID[1]] = M[mapID].Y[locID];
-	if(M[mapID].contextID != -1){
-       	   P.Input[M[mapID].contextID] = M[mapID].contextVal;
-	}
- }
+        if(M[mapID].contextID != -1){
+            P.Input[M[mapID].contextID] = M[mapID].contextVal;
+        }
+    }
 
     void setRandomInput(void){
         setMap(floor(morph::Tools::randDouble()*M.size()));
@@ -423,15 +423,15 @@ public:
         double errMin = 1e9;
         for(int k=0;k<K;k++){
             if(k%errorSamplePeriod){
-		
+
                 setRandomInput();
                 P.convergeForward(-1,true);
                 P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
                 P.convergeBackward(-1,false);
                 P.weightUpdate();
-		
+
             } else {
-		
+
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
                     setRandomInput();
@@ -448,7 +448,7 @@ public:
                 }
                 Error.push_back(errMin);
             }
-	
+
             if(fmod(k,K/100)==0){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
@@ -459,8 +459,8 @@ public:
 
 
     /*
-        PLOTTING
-    */
+     PLOTTING
+     */
 
     void setColourMap(morph::ColourMapType cmap){
         colourMap = cmap;
