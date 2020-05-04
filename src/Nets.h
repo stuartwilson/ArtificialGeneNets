@@ -440,7 +440,8 @@ public:
                 }
                 Error.push_back(errMin);
             }
-            if(!(k%(K/100))){
+
+            if(fmod(k,K/100)==0){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
         }
