@@ -325,6 +325,9 @@ public:
 
         setColourMap(morph::ColourMapType::Viridis);
 
+	setMap(0);
+	sampleMap(0);
+
     }
 
     void saveOutputs(void) { // log outputs
@@ -362,8 +365,10 @@ public:
         P.reset();
         P.Input[inputID[0]] = M[mapID].X[locID]; // Training on the supplied x-values
         P.Input[inputID[1]] = M[mapID].Y[locID];
-        P.Input[M[mapID].contextID] = M[mapID].contextVal;
-    }
+	if(M[mapID].contextID != -1){
+       	   P.Input[M[mapID].contextID] = M[mapID].contextVal;
+	}
+ }
 
     void setRandomInput(void){
         setMap(floor(morph::Tools::randDouble()*M.size()));
@@ -418,12 +423,15 @@ public:
         double errMin = 1e9;
         for(int k=0;k<K;k++){
             if(k%errorSamplePeriod){
+		
                 setRandomInput();
                 P.convergeForward(-1,true);
                 P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
                 P.convergeBackward(-1,false);
                 P.weightUpdate();
+		
             } else {
+		
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
                     setRandomInput();
@@ -440,12 +448,13 @@ public:
                 }
                 Error.push_back(errMin);
             }
-
+	
             if(fmod(k,K/100)==0){
                 logfile<<"steps: "<<(int)(100*(float)k/(float)K)<<"% ("<<k<<")"<<endl;
             }
         }
         P.W = P.Wbest;
+
     }
 
 
