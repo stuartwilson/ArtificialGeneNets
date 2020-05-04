@@ -1,5 +1,5 @@
 {
 	"inputID" : [0,1],
-	"maps" : [ {"filename" : "ctrl.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 0.0},
-		   {"filename" : "expt.h5", "outputID" : 3, "contextID" : 2, "contextVal" : 1.0} ]
+	"maps" : [ {"filename" : "ctrl1.h5", 	"outputID" : 3, "contextID" : 2, "contextVal" : 0.0},
+		   {"filename" : "expt1.h5", "outputID" : 3, "contextID" : 2, "contextVal" : 1.0} ]
 }

@@ -12,11 +12,11 @@ t = int(sys.argv[5])
 
 s = 'configs/maps/ucd/'
 
-src = [ 'configs/config2out1ctxt.json',
-        s+'18_147_id2_c.h5',
-        s+'17_268_id2_c.h5',
-        s+'18_147_rzrb_c.h5',
-        s+'17_268_rzrb_c.h5']
+src = ['configs/config2out1ctxt.json',
+        s+'18_147_id2_c.h5',    # CTL ID2
+        s+'17_268_id2_c.h5',    # P04 ID2
+        s+'18_147_rzrb_c.h5',   # CTL RZRb
+        s+'17_268_rzrb_c.h5']   # P04 RZRb
 
 '''
 src = [ 'configs/config2out1ctxt.json',

@@ -33,6 +33,18 @@ def waitUntilReady(x):
             if(x[i].poll() is None):
                 ready=False
 
+def removeConnectionsTo(pre, post, i):
+    k = np.where(post!=i)
+    pre = pre[k]
+    post = post[k]
+    return pre, post
+
+def removeConnectionsFrom(pre, post, i):
+    k = np.where(pre!=i)
+    pre = pre[k]
+    post = post[k]
+    return pre, post
+
 
 
 def runCull(Nnodes, Nbatch, Nsims, t, src, dst, loc='data', cullMax=0.95):
@@ -161,3 +173,65 @@ def run(Nnodes, Nbatch, Nsims, t, src, dst, loc='data'):
         h5f.create_dataset('minErr', data=minErr)
         h5f.close()
 
+def run2(Nnodes, Nbatch, Nsims, t, src, dst, loc='data'):
+
+    Seeds = np.arange(Nsims)
+    Sizes = np.linspace(Nnodes[0],Nnodes[1],Nsims)
+    Sizes = np.ceil(Sizes)
+
+    finErr = np.zeros(Nsims)
+    minErr = np.zeros(Nsims)
+
+    ######## RUN THE MODEL
+    j = 0
+    k = 0
+    running = True
+    while(running):
+        P = []
+        for i in range(Nbatch):
+            if not running: break
+            dir = loc+'/expt'+str(j)
+            subprocess.run('mkdir '+dir,shell=True)
+            for q in range(len(src)):
+                subprocess.run('cp '+src[q]+' '+dir+'/'+dst[q],shell=True)
+            ### NETWORK SPEC
+            N = Sizes[j]
+            Narr = np.array([N],dtype=int)
+            pre = np.array([],dtype=int)
+            post = np.array([],dtype=int)
+            pre, post = recur(pre,post,np.arange(N))
+            pre, post = removeConnectionsTo(pre, post, 2)
+            pre, post = removeConnectionsFrom(pre, post, 2)
+            pre = np.hstack([pre,[2,2]])
+            post = np.hstack([post,[3,4]])
+            h5f = h5py.File(dir+'/network.h5','w')
+            h5f.create_dataset('pre', data=pre)
+            h5f.create_dataset('post', data=post)
+            h5f.close()
+            P = np.hstack([P,subprocess.Popen('./../build/src/modelVis '+dir+'  '+str(t)+' '+str(Seeds[j]),shell=True)])
+            running=j<(Nsims-1)
+            j+=1
+        waitUntilReady(P)
+
+        ######## PERFORM ANALYSIS
+        for i in range(Nbatch):
+            if not running: break
+            try:
+                dir = loc+'/expt'+str(k)
+                h5f = h5py.File(dir + '/outputs.h5','r')
+                err = h5f['error'][:]
+                h5f.close()
+                finErr[k] = err[-1]
+                minErr[k] = np.min(err)
+            except:
+                print("no output"+str(k)+"\n")
+
+            running=k<(Nsims-1)
+            k+=1
+            print(k)
+
+        ### store results periodically
+        h5f = h5py.File(loc+'/summary.h5','w')
+        h5f.create_dataset('finErr', data=finErr)
+        h5f.create_dataset('minErr', data=minErr)
+        h5f.close()
