@@ -38,6 +38,13 @@ class Domain : public morph::RD_Base<Flt> {
 public:
     double ellipseA=1.0;
     double ellipseB=1.0;
+
+    alignas(alignof(vector<Flt>))
+    vector<Flt> X;
+
+    alignas(alignof(vector<Flt>))
+    vector<Flt> Y;
+
     virtual void init (void) {
         this->stepCount = 0;
     }
@@ -61,9 +68,19 @@ public:
         DBG ("HexGrid says d = " << this->d);
         this->set_v(this->hg->getv());
         DBG ("HexGrid says v = " << this->v);
+
+        this->resize_vector_variable (this->X);
+        this->resize_vector_variable (this->Y);
     }
     virtual void step (void) {
         this->stepCount++;
+    }
+
+    void setAxes(double xScale, double yScale, double xOffset, double yOffset){
+        for (unsigned int h=0; h<this->nhex; ++h) {
+            this->X[h] = this->hg->vhexen[h]->x*xScale+xOffset;
+            this->Y[h] = this->hg->vhexen[h]->y*yScale+yOffset;
+        }
     }
 };
 
@@ -76,69 +93,79 @@ class Map{
 
 public:
     int N;
-    vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
-    vector<double> X, Y, Z, F;
-    double minX, maxX, minY, maxY, minZ, maxZ, minF, maxF, xScale, yScale, xSep, xOff, yOff;// ySep;
-    vector<double> ySep;
+    //vector<double> Xscaled, Yscaled, Zscaled, Fscaled;
+    vector<double> F, Fscaled;
+    vector<vector<double> > X, Xscaled;
+    double minF, maxF;
+    vector<double> minX, maxX, xOff, xScale;
     int outputID, contextID;
     double contextVal;
     vector<array<float, 12>> quads;
 
     void init(string filename){
-        HdfData network(filename,1);
-        network.read_contained_vals ("X", X);
-        network.read_contained_vals ("Y", Y);
-        network.read_contained_vals ("Z", Z);
-        network.read_contained_vals ("F", F);
 
-        if((!(X.size()==Y.size())) || (!(X.size()==Z.size())) || (!(X.size()==F.size()))){
+        outputID = -1; // flag for not set
+        contextID = -1; // flag for not set
+        contextVal = 0.0; // default
+
+        HdfData network(filename,1);
+
+        network.read_contained_vals ("F", F);
+        N = F.size();
+
+        vector<double> x;   network.read_contained_vals ("X", x);
+        vector<double> y;   network.read_contained_vals ("Y", y);
+        vector<double> z;   network.read_contained_vals ("Z", z);
+
+        if((!(x.size()==N)) || (!(y.size()==N)) || (!(z.size()==N))){
             cout<<"X, Y, Z, F not all the same size... all kinds of badness!"<<endl;
         }
-        N = X.size();
 
-        minX = tools::getMin(X);
-        minY = tools::getMin(Y);
-        minZ = tools::getMin(Z);
+        X.push_back(x);
+        X.push_back(y);
+        X.push_back(z);
+
         minF = tools::getMin(F);
-        maxX = tools::getMax(X);
-        maxY = tools::getMax(Y);
-        maxZ = tools::getMax(Z);
         maxF = tools::getMax(F);
-        Xscaled = tools::normalize(X);
-        Yscaled = tools::normalize(Y);
-        Zscaled = tools::normalize(Z);
         Fscaled = tools::normalize(F);
 
-        double maxDim = maxX-minX;
-        if((maxY-minY)>maxDim){ maxDim = maxY-minY; };
-        xScale = (maxX-minX)/maxDim;
-        yScale = (maxY-minY)/maxDim;
+        for(int i=0;i<X.size();i++){
+            minX.push_back(tools::getMin(X[i]));
+            maxX.push_back(tools::getMax(X[i]));
+            xOff.push_back(-0.5*(maxX[i]-minX[i]));
+            Xscaled.push_back(tools::normalize(X[i]));
+        }
 
-        xOff = -0.5*(maxX-minX);
-        yOff = -0.5*(maxY-minY);
+        double maxDim = maxX[0]-minX[0];
+        for(int i=0;i<X.size();i++){
+            if((maxX[i]-minX[i])>maxDim){ maxDim = maxX[i]-minX[i]; };
+        }
 
-        vector<double> uniqueX = tools::getUnique(X);
+        for(int i=0;i<X.size();i++){
+            xScale.push_back((maxX[i]-minX[i])/maxDim);
+        }
+
+        // REMAINDER IS ABOUT HANDLING IRREGULAR GRID, E.G. FROM STALEFISH OUTPUT
+        vector<double> uniqueX = tools::getUnique(X[0]);
         int cols = uniqueX.size();
         vector<int> colID(N,0);
         vector<vector<double> > yByCol(cols);
         vector<int> count(cols,0);
         for(int i=0;i<N;i++){
             for(int j=0;j<cols;j++){
-                if(X[i]==uniqueX[j]){
+                if(X[0][i]==uniqueX[j]){
                     colID[i]=j;
-                    yByCol[j].push_back(Y[i]);
+                    yByCol[j].push_back(X[1][i]);
                     count[j]++;
                 }
             }
         }
-
         vector<double> yRange(cols);
         for(int i=0;i<cols;i++){
             yRange[i] = tools::getMax(yByCol[i])-tools::getMin(yByCol[i]);
         }
-
-        xSep = 0.5*(maxX-minX)/((double)cols-1);
-
+        double xSep = 0.5*(maxX[0]-minX[0])/((double)cols-1);
+        vector<double> ySep;
         for(int i=0;i<N;i++){
             ySep.push_back(0.5*yRange[colID[i]]/((double)count[colID[i]]-1));
         }
@@ -146,27 +173,23 @@ public:
         array<float, 12> sbox;
         for (int i=0; i<N; i++) {
             // corner 1 x,y,z
-            sbox[0] = xScale*(xOff+X[i]-xSep);
-            sbox[1] = yScale*(yOff+Y[i]-ySep[i]);
+            sbox[0] = xScale[0]*(xOff[0]+X[0][i]-xSep);
+            sbox[1] = xScale[1]*(xOff[1]+X[1][i]-ySep[i]);
             sbox[2] = 0.0;
             // corner 2 x,y,z
-            sbox[3] = xScale*(xOff+X[i]-xSep);
-            sbox[4] = yScale*(yOff+Y[i]+ySep[i]);
+            sbox[3] = xScale[0]*(xOff[0]+X[0][i]-xSep);
+            sbox[4] = xScale[1]*(xOff[1]+X[1][i]+ySep[i]);
             sbox[5] = 0.0;
             // corner 3 x,y,z
-            sbox[6] = xScale*(xOff+X[i]+xSep);
-            sbox[7] = yScale*(yOff+Y[i]+ySep[i]);
+            sbox[6] = xScale[0]*(xOff[0]+X[0][i]+xSep);
+            sbox[7] = xScale[1]*(xOff[1]+X[1][i]+ySep[i]);
             sbox[8] = 0.0;
             // corner 4 x,y,z
-            sbox[9] = xScale*(xOff+X[i]+xSep);
-            sbox[10]= yScale*(yOff+Y[i]-ySep[i]);
+            sbox[9] = xScale[0]*(xOff[0]+X[0][i]+xSep);
+            sbox[10]= xScale[1]*(xOff[1]+X[1][i]-ySep[i]);
             sbox[11]= 0.0;
             quads.push_back(sbox);
         }
-
-        outputID = -1; // flag for not set
-        contextID = -1; // flag for not set
-        contextVal = 0.0; // default
 
     }
 
@@ -187,6 +210,9 @@ public:
     }
 };
 
+
+
+
 class Net{
 
 public:
@@ -196,8 +222,6 @@ public:
     Pineda P;
     vector<Map> M;
     Domain<double> domain;
-    double xScale, yScale, xOffset, yOffset;
-    int mapID, locID;
     vector<int> inputID;
     vector<int> outputID;
     vector<int> contextIDs;
@@ -238,7 +262,7 @@ public:
             logfile<<"Map["<<i<<"]:"<<ss.str()<<endl;
             int oID = maps[i].get("outputID",-1).asInt();
             int cID = maps[i].get("contextID",-1).asInt();
-            float cVal = maps[i].get("contextVal",-1.0).asFloat();
+            float cVal = maps[i].get("contextVal",0.0).asFloat();
             M.push_back(Map(ss.str(),oID,cID,cVal));
         }
 
@@ -249,10 +273,13 @@ public:
         }
         outputID = tools::getUnique(outputID);
 
+        inputID.resize(2,0);
+        inputID[1] = 1;
         const Json::Value inp = conf.getArray("inputID");
         for(int i=0;i<inp.size();i++){
             inputID.push_back(inp[i].asInt());
         }
+        inputID = tools::getUnique(inputID);
 
         // Setup network connectivity
         vector<int> pre, post;
@@ -287,18 +314,14 @@ public:
         double minX= 1e9;
         double minY= 1e9;
         for(int i=0;i<M.size();i++){
-            if(M[i].maxX>maxX){maxX=M[i].maxX;};
-            if(M[i].maxY>maxY){maxY=M[i].maxY;};
-            if(M[i].minX<minX){minX=M[i].minX;};
-            if(M[i].minY<minY){minY=M[i].minY;};
+            if(M[i].maxX[0]>maxX){maxX=M[i].maxX[0];};
+            if(M[i].maxX[1]>maxY){maxY=M[i].maxX[1];};
+            if(M[i].minX[0]<minX){minX=M[i].minX[0];};
+            if(M[i].minX[1]<minY){minY=M[i].minX[1];};
         }
-        xOffset = minX+(maxX-minX)*0.5;
-        yOffset = minY+(maxY-minY)*0.5;
-        xScale = (maxX-minX)/(2.0*domain.ellipseA);
-        yScale = xScale;
 
-        xScale *= scaleDomain;
-        yScale *= scaleDomain;
+        double scale = (maxX-minX)/(2.0*domain.ellipseA) * scaleDomain;
+        domain.setAxes(scale, scale, minX+(maxX-minX)*0.5, minY+(maxY-minY)*0.5);
 
         // identify the unique context conditions
         vector<int> allContextIDs;
@@ -324,9 +347,6 @@ public:
         nContext = contextIDs.size();
 
         setColourMap(morph::ColourMapType::Viridis);
-
-        setMap(0);
-        sampleMap(0);
 
     }
 
@@ -357,31 +377,26 @@ public:
         logfile.close();
     }
 
-    void setMap(int i){ mapID = i; }
-
-    void sampleMap(int j){ locID = j; }
-
-    void setInput(void){
+    void setInput(int mapID, int locID){
         P.reset();
-        P.Input[inputID[0]] = M[mapID].X[locID]; // Training on the supplied x-values
-        P.Input[inputID[1]] = M[mapID].Y[locID];
+        P.Input[inputID[0]] = M[mapID].X[0][locID]; // Training on the supplied x-values
+        P.Input[inputID[1]] = M[mapID].X[1][locID];
         if(M[mapID].contextID != -1){
             P.Input[M[mapID].contextID] = M[mapID].contextVal;
         }
     }
 
-    void setRandomInput(void){
-        setMap(floor(morph::Tools::randDouble()*M.size()));
-        sampleMap(floor(morph::Tools::randDouble()*M[mapID].N));
-        setInput();
+    vector<int> setRandomInput(void){
+        // first is mapID, second is location ID
+        vector<int> sample(2,floor(morph::Tools::randDouble()*M.size()));
+        sample[1] = floor(morph::Tools::randDouble()*M[sample[0]].N);;
+        return sample;
     }
 
-    vector<vector<double> > testMap(int i){
-        setMap(i);
+    vector<vector<double> > testMap(int mapID){
         vector<vector<double> > response(P.N,vector<double>(M[mapID].N,0.));
         for(int j=0;j<M[mapID].N;j++){
-            sampleMap(j);
-            setInput();
+            setInput(mapID,j);
             P.convergeForward(-1,false);
             for(int k=0;k<P.N;k++){
                 response[k][j] = P.X[k];
@@ -390,14 +405,15 @@ public:
         return response;
     }
 
+
     vector<vector<double> > testDomainContext(int i){
 
         vector<vector<double> > R(P.N,vector<double>(domain.nhex,0.));
 
         for (unsigned int j=0; j<domain.nhex; ++j) {
             P.reset();
-            P.Input[inputID[0]] = domain.hg->vhexen[j]->x*xScale+xOffset;
-            P.Input[inputID[1]] = domain.hg->vhexen[j]->y*yScale+yOffset;
+            P.Input[inputID[0]] = domain.X[j];
+            P.Input[inputID[1]] = domain.Y[j];
             P.Input[contextIDs[i]] = contextVals[i];
             P.convergeForward(-1,false);
             for(int k=0;k<P.N;k++){
@@ -406,6 +422,9 @@ public:
         }
         return R;
     }
+
+
+/*  ********  */
 
     vector<vector<vector<double> > > testDomains(void){
 
@@ -424,9 +443,10 @@ public:
         for(int k=0;k<K;k++){
             if(k%errorSamplePeriod){
 
-                setRandomInput();
+                vector<int> sample = setRandomInput();
+                setInput(sample[0],sample[1]);
                 P.convergeForward(-1,true);
-                P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
+                P.setError(vector<int> (1,M[sample[0]].outputID), vector<double> (1,M[sample[0]].F[sample[1]]));
                 P.convergeBackward(-1,false);
                 P.weightUpdate();
 
@@ -434,10 +454,13 @@ public:
 
                 double err = 0.;
                 for(int j=0;j<errorSampleSize;j++){
-                    setRandomInput();
+
+                    vector<int> sample = setRandomInput();
+                    setInput(sample[0],sample[1]);
                     P.convergeForward(-1,false);
-                    P.setError(vector<int> (1,M[mapID].outputID), vector<double> (1,M[mapID].F[locID]));
+                    P.setError(vector<int> (1,M[sample[0]].outputID), vector<double> (1,M[sample[0]].F[sample[1]]));
                     err += P.getError();
+
                 }
                 err /= (double)errorSampleSize;
                 if(err<errMin){
