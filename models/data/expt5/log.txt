@@ -1,0 +1,6 @@
+Hello.
+Map[0]:data/expt5/map0.h5
+Map[1]:data/expt5/map1.h5
+Map[2]:data/expt5/map2.h5
+Map[3]:data/expt5/map3.h5
+Goodbye.
