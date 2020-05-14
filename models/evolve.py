@@ -5,7 +5,8 @@ import h5py
 
 ######## SPECIFY TRAINING MAPS
 
-mapDir = '../maps/ucd/maps/'
+#mapDir = '../maps/ucd/maps/'
+mapDir = 'tmp/'
 mapFiles = [mapDir+'18_147_id2_c.h5',    # CTL ID2
             mapDir+'17_268_id2_c.h5',    # P04 ID2
             mapDir+'18_147_rzrb_c.h5',   # CTL RZRb
