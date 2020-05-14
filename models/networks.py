@@ -74,14 +74,21 @@ class BatchRun:
         self.params = params
         self.j = 0
         self.k = 0
+        self.J = 0
+        self.K = 0
 
     def buildNet(self, pre, post):
+        self.N=self.Sizes[self.j]
         pre, post = recur(pre,post,np.arange(self.N))
         return pre, post
 
+
     def run(self):
 
-        Seeds = np.arange(self.Nsims)
+        self.j = 0
+        self.k = 0
+
+        #Seeds = np.arange(self.Nsims)
         finErr = np.zeros(self.Nsims)
         minErr = np.zeros(self.Nsims)
 
@@ -91,8 +98,7 @@ class BatchRun:
             P = []
             for i in range(self.Nbatch):
                 if not running: break
-                self.N=self.Sizes[self.j]
-                loc = self.dir+'/expt'+str(self.j)
+                loc = self.dir+'/expt'+str(self.J)
                 subprocess.run('mkdir '+loc,shell=True)
                 with open(loc+'/config.json', 'w') as outfile: json.dump(self.configfilecontents, outfile)
                 for q in range(len(self.mapFiles)):
@@ -104,16 +110,16 @@ class BatchRun:
                 h5f.create_dataset('pre', data=pre)
                 h5f.create_dataset('post', data=post)
                 h5f.close()
-                P = np.hstack([P,subprocess.Popen('./../build/'+self.cmd+' '+loc+'  '+str(Seeds[self.j])+' '+str(self.T),shell=True)])
+                P = np.hstack([P,subprocess.Popen('./../build/'+self.cmd+' '+loc+'  '+str(self.J)+' '+str(self.T),shell=True)])
                 running=self.j<(self.Nsims-1)
                 self.j+=1
+                self.J+=1
             waitUntilReady(P)
 
             ######## PERFORM ANALYSIS
             for i in range(self.Nbatch):
-                if not running: break
                 try:
-                    loc = self.dir+'/expt'+str(self.k)
+                    loc = self.dir+'/expt'+str(self.K)
                     h5f = h5py.File(loc + '/outputs.h5','r')
                     err = h5f['error'][:]
                     h5f.close()
@@ -124,14 +130,17 @@ class BatchRun:
 
                 running=self.k<(self.Nsims-1)
                 self.k+=1
+                self.K+=1
                 print(self.k)
+                if not running: break
 
-            ### store results periodically
-            h5f = h5py.File(self.dir+'/summary.h5','w')
-            h5f.create_dataset('finErr', data=finErr)
-            h5f.create_dataset('minErr', data=minErr)
-            h5f.close()
+        ### store results periodically
+        h5f = h5py.File(self.dir+'/summary.h5','w')
+        h5f.create_dataset('finErr', data=finErr)
+        h5f.create_dataset('minErr', data=minErr)
+        h5f.close()
 
+        return finErr, minErr
 
 
 '''
@@ -140,12 +149,14 @@ class BatchRun:
 
 class FullyRecurrent(BatchRun):
     def buildNet(self, pre, post):
+        self.N=self.Sizes[self.j]
         pre, post = recur(pre,post,np.arange(self.N))
         return pre, post
 
 
 class RandomCull(BatchRun):
     def buildNet(self, pre, post):
+        self.N=self.Sizes[self.j]
         pre, post = recur(pre,post,np.arange(self.N))
         toCull = int(self.params[0]*(self.j/(self.Nsims-1))*self.N)
         for c in range(toCull):
