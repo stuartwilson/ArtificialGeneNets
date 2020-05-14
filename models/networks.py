@@ -77,12 +77,13 @@ class BatchRun:
         self.J = 0
         self.K = 0
 
+        '''
         subprocess.run('mkdir '+dir,shell=True)
         subprocess.run('mkdir '+dir+'/maps',shell=True)
 
         for q in range(len(self.mapFiles)):
             subprocess.run('cp '+self.mapFiles[q]+' '+dir+'/maps/map'+str(q)+'.h5',shell=True)
-
+        '''
 
     def buildNet(self, pre, post):
         self.N=self.Sizes[self.j]
@@ -111,6 +112,8 @@ class BatchRun:
                     loc = self.dir+'/expt'+str(self.J)
 
                 subprocess.run('mkdir '+loc,shell=True)
+                for q in range(len(self.mapFiles)):
+                    subprocess.run('cp '+self.mapFiles[q]+' '+loc+'/map'+str(q)+'.h5',shell=True)
                 with open(loc+'/config.json', 'w') as outfile: json.dump(self.configfilecontents, outfile)
                 pre = np.array([],dtype=int)
                 post = np.array([],dtype=int)

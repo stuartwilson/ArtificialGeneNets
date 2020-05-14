@@ -17,10 +17,10 @@ mapFiles = [mapDir+'18_147_id2_c.h5',    # CTL ID2
 
 config = {}
 config['maps'] = []
-config['maps'].append({'filename': '../maps/map0.h5', 'outputID': 3, 'contextID': 2, 'contextVal': 0.0})
-config['maps'].append({'filename': '../maps/map1.h5', 'outputID': 3, 'contextID': 2, 'contextVal': 1.0})
-config['maps'].append({'filename': '../maps/map2.h5', 'outputID': 4, 'contextID': 2, 'contextVal': 0.0})
-config['maps'].append({'filename': '../maps/map3.h5', 'outputID': 4, 'contextID': 2, 'contextVal': 1.0})
+config['maps'].append({'filename': 'map0.h5', 'outputID': 3, 'contextID': 2, 'contextVal': 0.0})
+config['maps'].append({'filename': 'map1.h5', 'outputID': 3, 'contextID': 2, 'contextVal': 1.0})
+config['maps'].append({'filename': 'map2.h5', 'outputID': 4, 'contextID': 2, 'contextVal': 0.0})
+config['maps'].append({'filename': 'map3.h5', 'outputID': 4, 'contextID': 2, 'contextVal': 1.0})
 
 
 
