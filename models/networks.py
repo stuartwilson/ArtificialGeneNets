@@ -77,13 +77,20 @@ class BatchRun:
         self.J = 0
         self.K = 0
 
+        subprocess.run('mkdir '+dir,shell=True)
+        subprocess.run('mkdir '+dir+'/maps',shell=True)
+
+        for q in range(len(self.mapFiles)):
+            subprocess.run('cp '+self.mapFiles[q]+' '+dir+'/maps/map'+str(q)+'.h5',shell=True)
+
+
     def buildNet(self, pre, post):
         self.N=self.Sizes[self.j]
         pre, post = recur(pre,post,np.arange(self.N))
         return pre, post
 
 
-    def run(self):
+    def run(self,overwrite=False):
 
         self.j = 0
         self.k = 0
@@ -98,11 +105,13 @@ class BatchRun:
             P = []
             for i in range(self.Nbatch):
                 if not running: break
-                loc = self.dir+'/expt'+str(self.J)
+                if (overwrite):
+                    loc = self.dir+'/expt'+str(self.j)
+                else:
+                    loc = self.dir+'/expt'+str(self.J)
+
                 subprocess.run('mkdir '+loc,shell=True)
                 with open(loc+'/config.json', 'w') as outfile: json.dump(self.configfilecontents, outfile)
-                for q in range(len(self.mapFiles)):
-                    subprocess.run('cp '+self.mapFiles[q]+' '+loc+'/map'+str(q)+'.h5',shell=True)
                 pre = np.array([],dtype=int)
                 post = np.array([],dtype=int)
                 pre, post = self.buildNet(pre,post)
@@ -119,7 +128,11 @@ class BatchRun:
             ######## PERFORM ANALYSIS
             for i in range(self.Nbatch):
                 try:
-                    loc = self.dir+'/expt'+str(self.K)
+                    if (overwrite):
+                        loc = self.dir+'/expt'+str(self.k)
+                    else:
+                        loc = self.dir+'/expt'+str(self.K)
+
                     h5f = h5py.File(loc + '/outputs.h5','r')
                     err = h5f['error'][:]
                     h5f.close()
